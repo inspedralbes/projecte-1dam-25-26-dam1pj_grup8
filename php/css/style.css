@@ -1,5 +1,5 @@
 .hero-header {
-    height: 60vh;
+    height: 91.4vh;
     position: relative;
 
     background-size: cover;
@@ -38,4 +38,12 @@
     background-color: rgb(24, 30, 39);
     border-color: rgb(24, 30, 39);
     color: white;
+}
+
+/* Cuando aparecen los roles dentro del hero */
+.hero-roles {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
 }
