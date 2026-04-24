@@ -1,0 +1,55 @@
+# Hi ha 3 contenidors
+# 1. php amb apache (la nostra aplicació web) que la trobaràs a http://localhost:8080
+# 2. mysql (la base de dades), que no és accessible des de l'exterior (el primer cop pot trigar diversos minuts, mireu els logs)
+# 3. adminer (un client web per gestionar el mysql), que la trobaràs a http://localhost:8081
+
+
+services:
+  web:
+    #La imatge php:apache no conté els drivers de mysql, hem de fer una imatge a mida
+    #image: php:apache
+    build:
+      context: ./images
+      dockerfile: Dockerfile_php
+    ports:
+      - "8080:80"
+    volumes:
+      - ./php:/var/www/html
+    environment:
+      VAR1: "sóc una pera i estic al docker-compose"
+      VAR2: ${VAR2}
+    depends_on:
+      - db
+
+  db:
+    # Tota la informació d'aquesta imatge està https://dockerhub.com/_/mysql
+    image: mysql:9.3
+    environment:
+      MYSQL_ROOT_PASSWORD: passwordDeRootQueNoShaDeFerServirMai
+      # És millor no crear la BBDD aquí, ja que no pots control·lar la codificació
+      # de caràcters i aleshores donarà problemes amb accents i caràcters especials
+      # La BBDD es crearà a l'inici del contenidor amb els script d'inicialització
+      # MYSQL_DATABASE: persones
+      MYSQL_USER: usuari
+      MYSQL_PASSWORD: paraula_de_pas
+      LANG: C.UTF-8
+    #    El mysql no s'exposa a l'exterior
+    #    L'aplicació web hi accedirà per la xarxa interna de docker
+    #    ports:
+    #      - "3306:3306"
+
+    # La carpeta de mysql ha d'estar al .gitignore per no pujar-la al repositori
+    volumes:
+      - ./db_data:/var/lib/mysql
+      - ./db_init:/docker-entrypoint-initdb.d
+
+
+# Aquesta imatge és un client web per gestionar el mysql via web
+# està disponible a http://localhost:8081
+# i les credencials són les del mysql (per que "simplement" es connecta al mysql)
+  adminer:
+    image: adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db

@@ -1,0 +1,16 @@
+FROM php:apache
+
+# Realment només necessitem això per mysql 
+#La gent de docker i php han preparat uns scripts que ens faciliten la feina
+# i ens permeten instal·lar extensions de php de manera senzilla
+RUN docker-php-ext-install pdo_mysql mysqli
+
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
+
+# Exemple de com instal·lar altres paquets a la imatge
+RUN apt-get update && apt-get install -y \
+    unzip \
+    zip \
+
+
