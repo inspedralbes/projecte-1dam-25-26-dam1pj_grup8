@@ -5,8 +5,7 @@ Llistat d'alguns dels punts que han de quedar explicats en aquesta carpeta. Pode
 
 ## Documentació bàsica MÍNIMA
  * Objectius
- * Arquitectura bàsica<img width="817" height="906" alt="diagramaCasosUs drawio" src="https://github.com/user-attachments/assets/f8e3a6d4-f955-420b-b571-84be035288b0" />
-
+ * Arquitectura bàsica
    * Tecnologies utilitzades
    * Interrelació entre els diversos components
  * Com crees l'entorn de desenvolupament
@@ -19,3 +18,5 @@ Llistat d'alguns dels punts que han de quedar explicats en aquesta carpeta. Pode
  * Altres elements importants.
  * ...
 
+## DIAGRAMA
+<img width="817" height="906" alt="diagramaCasosUs drawio" src="https://github.com/user-attachments/assets/f8e3a6d4-f955-420b-b571-84be035288b0" />
