@@ -10,11 +10,11 @@
 
         <div class="d-grid gap-3">
 
-            <a href="comprovar_incidencia.php" class="btn btn-prof-secondary">
+            <a href="comprovar_incidencia.php" class="btn btn-prof">
                 Comprovar incidència
             </a>
 
-            <a href="nova_incidencia.php" class="btn btn-prof-primary">
+            <a href="nova_incidencia.php" class="btn btn-prof">
                 Nova incidència
             </a>
 

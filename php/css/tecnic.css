@@ -1,0 +1,55 @@
+body {
+    background-color: rgb(238, 238, 238);
+}
+
+/* CONTENEDOR PRINCIPAL */
+.tecnic-hero {
+    height: calc(100vh - 56px);
+    background: linear-gradient(
+        135deg,
+        rgb(34, 40, 49),
+        rgb(57, 62, 70)
+    );
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: rgb(238, 238, 238);
+    text-align: center;
+}
+
+/* CAJA CENTRAL */
+.tecnic-box {
+    background-color: rgba(57, 62, 70, 0.85);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    max-width: 500px;
+    width: 100%;
+}
+
+/* TÍTULO */
+.tecnic-title {
+    margin-bottom: 25px;
+    font-weight: bold;
+}
+
+/* BOTONES */
+.btn-tecnic {
+    background-color: rgb(34, 40, 49);
+    border: none;
+    color: rgb(0, 173, 181);
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    border-radius: 10px;
+    transition: 0.3s ease;
+}
+
+/* HOVER */
+.btn-tecnic:hover {
+    background-color: rgb(0, 173, 181);
+    color: rgb(238, 238, 238);
+    transform: translateY(-2px);
+}
