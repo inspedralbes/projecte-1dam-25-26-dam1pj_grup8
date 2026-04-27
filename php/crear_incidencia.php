@@ -29,6 +29,15 @@ function columna_existeix(mysqli $conn, string $taula, string $columna): bool
 	return $existeix;
 }
 
+function longitud(string $text): int
+{
+	if (function_exists('mb_strlen')) {
+		return (int) mb_strlen($text);
+	}
+
+	return strlen($text);
+}
+
 function crear_incidencia(mysqli $conn): void
 {
 	$departament = trim((string)($_POST['departament'] ?? ''));
@@ -39,12 +48,12 @@ function crear_incidencia(mysqli $conn): void
 		return;
 	}
 
-	if (mb_strlen($departament) > 80) {
+	if (longitud($departament) > 80) {
 		echo "<div class='alert alert-danger' role='alert'>El departament és massa llarg (màxim 80 caràcters).</div>";
 		return;
 	}
 
-	if (mb_strlen($descripcio_curta) > 255) {
+	if (longitud($descripcio_curta) > 255) {
 		echo "<div class='alert alert-danger' role='alert'>La descripció és massa llarga (màxim 255 caràcters).</div>";
 		return;
 	}
@@ -76,7 +85,26 @@ function crear_incidencia(mysqli $conn): void
 
 	$stmt->bind_param('ss', $departament, $descripcio_curta);
 	if ($stmt->execute()) {
-		echo "<div class='alert alert-success' role='alert'>Incidència creada amb èxit.</div>";
+		$nou_id = (int) $conn->insert_id;
+		$data_guardada = '';
+
+		$stmt2 = $conn->prepare('SELECT data_incidencia FROM incidencies WHERE id = ?');
+		if ($stmt2 !== false) {
+			$stmt2->bind_param('i', $nou_id);
+			if ($stmt2->execute()) {
+				$res = $stmt2->get_result();
+				if ($res !== false && $row = $res->fetch_assoc()) {
+					$data_guardada = (string) ($row['data_incidencia'] ?? '');
+				}
+			}
+			$stmt2->close();
+		}
+
+		echo "<div class='alert alert-success' role='alert'>Incidència creada amb èxit. ID: <strong>" . htmlspecialchars((string)$nou_id) . "</strong>";
+		if ($data_guardada !== '') {
+			echo " — Data: <strong>" . htmlspecialchars($data_guardada) . "</strong>";
+		}
+		echo "</div>";
 	} else {
 		echo "<div class='alert alert-danger' role='alert'>Error al crear la incidència: " . htmlspecialchars($stmt->error) . "</div>";
 	}
