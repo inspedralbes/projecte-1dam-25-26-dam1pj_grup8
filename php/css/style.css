@@ -1,26 +1,27 @@
 .hero-header {
-    height: 91.4vh;
-    position: relative;
-
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-
+    height: 100vh;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-
-    color: white;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     text-align: center;
-
     overflow: hidden;
+    margin: 0;
+    color: white;
 }
-
+.hero-title {
+    color: rgb(0, 173, 181);
+}
 .hero-overlay {
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
 }
+
 
 .hero-content {
     position: relative;
@@ -51,6 +52,9 @@
 .site-footer{
     background: rgb(34,40,49);
     color: rgb(238,238,238);
+    text-align: center;
+    padding: 20px 0;
+    border-top: 1px solid rgba(255,255,255,0.05);
 }
 
 /* PÁGINAS DE ROL */
