@@ -26,6 +26,10 @@
                     Tècnic
                 </a>
 
+                <a href="responsable_tecnic.php" class="btn btn-custom btn-lg px-4">
+                    Responsable Tècnic
+                </a>
+
                 <a href="admin.php" class="btn btn-custom btn-lg px-4">
                     Admin
                 </a>

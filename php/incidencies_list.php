@@ -51,7 +51,7 @@ function mostrar_incidencies(mysqli $conn): void
 
     echo "<div class=\"table-responsive\">";
     echo "<table class=\"table table-sm table-striped\">";
-    echo "<thead><tr><th scope=\"col\">ID</th><th scope=\"col\">Departament</th><th scope=\"col\">Descripció</th><th scope=\"col\">Data</th></tr></thead>";
+    echo "<thead><tr><th scope=\"col\">ID</th><th scope=\"col\">Departament</th><th scope=\"col\">Descripció</th><th scope=\"col\">Data</th><th scope=\"col\">Accions</th></tr></thead>";
     echo "<tbody>";
     while ($row = $res->fetch_assoc()) {
         $id = (int) $row['id'];
@@ -64,6 +64,8 @@ function mostrar_incidencies(mysqli $conn): void
         echo "<td>$dep</td>";
         echo "<td>$desc</td>";
         echo "<td>$data</td>";
+        $edit_url = 'editar_incidencia.php?id=' . $id;
+        echo "<td><a href=\"$edit_url\" class=\"btn btn-sm btn-outline-primary\">Editar</a></td>";
         echo "</tr>";
     }
     echo "</tbody></table></div></div>";
