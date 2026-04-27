@@ -14,7 +14,7 @@
                 Gestionar usuaris
             </a>
 
-            <a href="#" class="btn btn-admin">
+            <a href="todas_las_incidencias.php" class="btn btn-admin">
                 Totes les incidències
             </a>
 
