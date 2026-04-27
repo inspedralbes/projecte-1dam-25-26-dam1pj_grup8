@@ -34,6 +34,17 @@ CREATE TABLE cases (
 );
 
 
+-- Taula d'incidències (pantalla "Registrar nova incidència")
+-- L'usuari només introdueix departament i descripció curta.
+-- La data s'assigna automàticament i l'id és autonumèric.
+CREATE TABLE IF NOT EXISTS incidencies (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  departament VARCHAR(80) NOT NULL,
+  data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  descripcio_curta VARCHAR(255) NOT NULL
+);
+
+
 
 -- Afegim algunes dades inicials a la taula cases
 INSERT INTO cases (name) VALUES ('Casa Milà');
