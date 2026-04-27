@@ -59,12 +59,19 @@ function crear_incidencia(mysqli $conn): void
 	}
 
 	if (!taula_existeix($conn, 'incidencies')) {
-		echo "<div class='alert alert-danger' role='alert'>";
-		echo "No existeix la taula <strong>incidencies</strong> a la base de dades. ";
-		echo "Si ja tenies la BD creada (carpeta <code>db_data/</code>), l'script de <code>db_init/</code> no s'executa de nou. ";
-		echo "Crea la taula manualment (via Adminer) o reinicialitza la BD esborrant <code>db_data/</code> i tornant a aixecar els contenidors.";
-		echo "</div>";
-		return;
+		$create_sql = "CREATE TABLE IF NOT EXISTS incidencies (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			departament VARCHAR(80) NOT NULL,
+			descripcio_curta VARCHAR(255) NOT NULL,
+			data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+
+		if ($conn->query($create_sql) === false) {
+			echo "<div class='alert alert-danger' role='alert'>";
+			echo "No s'ha pogut crear la taula <strong>incidencies</strong>: " . htmlspecialchars($conn->error);
+			echo "</div>";
+			return;
+		}
 	}
 
 	if (!columna_existeix($conn, 'incidencies', 'departament') || !columna_existeix($conn, 'incidencies', 'descripcio_curta')) {
