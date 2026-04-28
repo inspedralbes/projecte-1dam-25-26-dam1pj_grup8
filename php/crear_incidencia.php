@@ -38,24 +38,30 @@ function longitud(string $text): int
 	return strlen($text);
 }
 
-function crear_incidencia(mysqli $conn): void
+function crear_incidencia(mysqli $conn): array
 {
 	$departament = trim((string)($_POST['departament'] ?? ''));
 	$descripcio_curta = trim((string)($_POST['descripcio_curta'] ?? ''));
 
 	if ($departament === '' || $descripcio_curta === '') {
-		echo "<div class='alert alert-danger' role='alert'>Omple tots els camps obligatoris.</div>";
-		return;
+		return [
+			'type' => 'error',
+			'message_html' => 'Omple tots els camps obligatoris.',
+		];
 	}
 
 	if (longitud($departament) > 80) {
-		echo "<div class='alert alert-danger' role='alert'>El departament és massa llarg (màxim 80 caràcters).</div>";
-		return;
+		return [
+			'type' => 'error',
+			'message_html' => 'El departament és massa llarg (màxim 80 caràcters).',
+		];
 	}
 
 	if (longitud($descripcio_curta) > 255) {
-		echo "<div class='alert alert-danger' role='alert'>La descripció és massa llarga (màxim 255 caràcters).</div>";
-		return;
+		return [
+			'type' => 'error',
+			'message_html' => 'La descripció és massa llarga (màxim 255 caràcters).',
+		];
 	}
 
 	if (!taula_existeix($conn, 'incidencies')) {
@@ -67,27 +73,27 @@ function crear_incidencia(mysqli $conn): void
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
 
 		if ($conn->query($create_sql) === false) {
-			echo "<div class='alert alert-danger' role='alert'>";
-			echo "No s'ha pogut crear la taula <strong>incidencies</strong>: " . htmlspecialchars($conn->error);
-			echo "</div>";
-			return;
+			return [
+				'type' => 'error',
+				'message_html' => "No s'ha pogut crear la taula <strong>incidencies</strong>: " . htmlspecialchars($conn->error),
+			];
 		}
 	}
 
 	if (!columna_existeix($conn, 'incidencies', 'departament') || !columna_existeix($conn, 'incidencies', 'descripcio_curta')) {
-		echo "<div class='alert alert-danger' role='alert'>";
-		echo "La taula <strong>incidencies</strong> existeix però no té l'esquema esperat (falten columnes). ";
-		echo "Reinicialitza la BD (esborrant <code>db_data/</code>) o actualitza la taula via Adminer perquè tingui: ";
-		echo "<code>departament</code>, <code>descripcio_curta</code> i <code>data_incidencia</code>.";
-		echo "</div>";
-		return;
+		return [
+			'type' => 'error',
+			'message_html' => "La taula <strong>incidencies</strong> existeix però no té l'esquema esperat (falten columnes). Reinicialitza la BD (esborrant <code>db_data/</code>) o actualitza la taula via Adminer perquè tingui: <code>departament</code>, <code>descripcio_curta</code> i <code>data_incidencia</code>.",
+		];
 	}
 
 	$sql = "INSERT INTO incidencies (departament, descripcio_curta) VALUES (?, ?)";
 	$stmt = $conn->prepare($sql);
 	if ($stmt === false) {
-		echo "<div class='alert alert-danger' role='alert'>Error preparant la consulta: " . htmlspecialchars($conn->error) . "</div>";
-		return;
+		return [
+			'type' => 'error',
+			'message_html' => 'Error preparant la consulta: ' . htmlspecialchars($conn->error),
+		];
 	}
 
 	$stmt->bind_param('ss', $departament, $descripcio_curta);
@@ -107,16 +113,25 @@ function crear_incidencia(mysqli $conn): void
 			$stmt2->close();
 		}
 
-		echo "<div class='alert alert-success' role='alert'>Incidència creada amb èxit. ID: <strong>" . htmlspecialchars((string)$nou_id) . "</strong>";
+		$message_html = 'Incidència creada amb èxit. ID: <strong>' . htmlspecialchars((string) $nou_id) . '</strong>';
 		if ($data_guardada !== '') {
-			echo " — Data: <strong>" . htmlspecialchars($data_guardada) . "</strong>";
+			$message_html .= ' - Data: <strong>' . htmlspecialchars($data_guardada) . '</strong>';
 		}
-		echo "</div>";
-	} else {
-		echo "<div class='alert alert-danger' role='alert'>Error al crear la incidència: " . htmlspecialchars($stmt->error) . "</div>";
-	}
 
-	$stmt->close();
+		$stmt->close();
+
+		return [
+			'type' => 'success',
+			'message_html' => $message_html,
+		];
+	} else {
+		$stmt->close();
+
+		return [
+			'type' => 'error',
+			'message_html' => 'Error al crear la incidència: ' . htmlspecialchars($stmt->error),
+		];
+	}
 }
 
 ?>
@@ -128,8 +143,20 @@ function crear_incidencia(mysqli $conn): void
 	<p class="text-muted mb-4">Introdueix el departament i una descripció curta. La data s'assigna automàticament.</p>
 
 	<?php
+	$resultat_creacio = null;
 	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-		crear_incidencia($conn);
+		$resultat_creacio = crear_incidencia($conn);
+	}
+
+	$formulari_departament = (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'success')
+		? ''
+		: (string) ($_POST['departament'] ?? '');
+	$formulari_descripcio = (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'success')
+		? ''
+		: (string) ($_POST['descripcio_curta'] ?? '');
+
+	if (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'error') {
+		echo "<div class='alert alert-danger' role='alert'>" . ($resultat_creacio['message_html'] ?? '') . "</div>";
 	}
 	?>
 
@@ -143,7 +170,7 @@ function crear_incidencia(mysqli $conn): void
 				name="departament"
 				required
 				maxlength="80"
-				value="<?php echo htmlspecialchars((string)($_POST['departament'] ?? '')); ?>"
+				value="<?php echo htmlspecialchars($formulari_departament); ?>"
 			>
 		</div>
 
@@ -164,7 +191,7 @@ function crear_incidencia(mysqli $conn): void
 				rows="3"
 				maxlength="255"
 				required
-			><?php echo htmlspecialchars((string)($_POST['descripcio_curta'] ?? '')); ?></textarea>
+			><?php echo htmlspecialchars($formulari_descripcio); ?></textarea>
 		</div>
 
 		<div class="d-flex gap-2">
@@ -172,6 +199,27 @@ function crear_incidencia(mysqli $conn): void
 			<a class="btn btn-outline-secondary" href="professor.php">Tornar</a>
 		</div>
 	</form>
+
+	<?php if (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'success') : ?>
+		<div class="toast-container-custom">
+			<div
+				id="toastIncidenciaCreada"
+				class="toast js-toast-notification text-bg-success border-0"
+				role="alert"
+				aria-live="assertive"
+				aria-atomic="true"
+				data-bs-autohide="true"
+				data-bs-delay="3500"
+			>
+				<div class="d-flex">
+					<div class="toast-body">
+						<?php echo $resultat_creacio['message_html'] ?? ''; ?>
+					</div>
+					<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tancar"></button>
+				</div>
+			</div>
+		</div>
+	<?php endif; ?>
 </div>
 
 <?php include 'footer.php'; ?>

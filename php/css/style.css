@@ -102,3 +102,17 @@
     transform: translateY(-2px);
     color:white;
 }
+
+.toast-container-custom{
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    z-index: 1080;
+    width: min(360px, calc(100vw - 2.5rem));
+}
+
+.js-toast-notification{
+    box-shadow: 0 12px 35px rgba(0,0,0,.25);
+    border-radius: 14px;
+    overflow: hidden;
+}
