@@ -13,7 +13,22 @@ if (!is_array($schema_result) || ($schema_result['ok'] ?? false) !== true) {
     ];
 }
 
-$tecnic_assignacio = INCIDENCIA_TECNIC_PER_DEFECTE;
+$tecnics_disponibles = [];
+if ($alert === null) {
+    $tecnics_query = $conn->query("SELECT FIRST_NAME, LAST_NAME FROM TECNIC ORDER BY TECNIC_ID ASC");
+    if ($tecnics_query !== false) {
+        while ($row = $tecnics_query->fetch_assoc()) {
+            $label = trim((string)($row['FIRST_NAME'] ?? '') . ' ' . (string)($row['LAST_NAME'] ?? ''));
+            if ($label !== '') {
+                $tecnics_disponibles[] = $label;
+            }
+        }
+        $tecnics_query->free();
+    }
+}
+if (count($tecnics_disponibles) === 0) {
+    $tecnics_disponibles[] = INCIDENCIA_TECNIC_PER_DEFECTE;
+}
 
 $sort = (string)($_POST['sort'] ?? $_GET['sort'] ?? 'data');
 $dir = strtolower((string)($_POST['dir'] ?? $_GET['dir'] ?? 'desc'));
@@ -37,6 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
     $id = (int)($_POST['id'] ?? 0);
 
     if ($id > 0 && $action === 'assignar') {
+        $tecnic_assignacio = trim((string)($_POST['tecnic'] ?? ''));
+        if ($tecnic_assignacio === '' || !in_array($tecnic_assignacio, $tecnics_disponibles, true)) {
+            $alert = ['type' => 'warning', 'message' => "Has d'escollir un tècnic per assignar la incidència #$id."];
+        } else {
         $stmt = $conn->prepare('UPDATE incidencies SET estat = ?, tecnic_assignat = ? WHERE id = ? AND estat = ?');
         if ($stmt === false) {
             $alert = ['type' => 'danger', 'message' => 'Error preparant la consulta: ' . $conn->error];
@@ -50,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
                 $alert = ['type' => 'warning', 'message' => "No s'ha pogut assignar la incidència #$id (potser ja està assignada)."];
             }
             $stmt->close();
+        }
         }
     }
 
@@ -109,15 +129,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
 
         if ($mode === 'pendent') {
             echo "<td>";
-            echo "<form method='POST' class='d-inline'>";
-            echo "<input type='hidden' name='sort' value='" . htmlspecialchars((string)($filters['sort'] ?? '')) . "'>";
-            echo "<input type='hidden' name='dir' value='" . htmlspecialchars((string)($filters['dir'] ?? '')) . "'>";
-            echo "<input type='hidden' name='q' value='" . htmlspecialchars((string)($filters['q'] ?? '')) . "'>";
-            echo "<input type='hidden' name='data' value='" . htmlspecialchars((string)($filters['data'] ?? '')) . "'>";
-            echo "<input type='hidden' name='action' value='assignar'>";
-            echo "<input type='hidden' name='id' value='" . (int)$id . "'>";
-            echo "<button type='submit' class='btn btn-sm btn-outline-primary'>Assignar</button>";
-            echo "</form>";
+            echo "<button type='button' class='btn btn-sm btn-outline-primary' data-bs-toggle='modal' data-bs-target='#assignarModal' data-incidencia-id='" . (int)$id . "'>Assignar</button>";
             echo "</td>";
         }
 
@@ -340,7 +352,7 @@ if ($alert === null) {
     <div class="card card-body mb-4">
         <h2 class="h5 mb-3">Pendents d'assignar</h2>
         <?php render_table_responsable($pending_rows, 'pendent', $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data]); ?>
-        <div class="form-text">En assignar, es marcarà automàticament com a <strong>assignada</strong> al tècnic: <?php echo htmlspecialchars($tecnic_assignacio); ?>.</div>
+        <div class="form-text">En assignar, podràs escollir el tècnic i es marcarà com a <strong>assignada</strong>.</div>
     </div>
 
     <div class="card card-body mb-4">
@@ -355,5 +367,55 @@ if ($alert === null) {
 
     <a class="btn btn-outline-secondary" href="index.php">Tornar</a>
 </div>
+
+<!-- Modal: Assignar a tècnic -->
+<div class="modal fade" id="assignarModal" tabindex="-1" aria-labelledby="assignarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignarModalLabel">Assignar incidència</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tancar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Selecciona un tècnic per assignar la incidència <span class="fw-bold">#<span id="assignarIncidenciaId">—</span></span>.</p>
+
+                <form method="POST" id="assignarForm">
+                    <input type="hidden" name="sort" value="<?php echo htmlspecialchars((string)$sort); ?>">
+                    <input type="hidden" name="dir" value="<?php echo htmlspecialchars((string)$dir); ?>">
+                    <input type="hidden" name="q" value="<?php echo htmlspecialchars((string)$q); ?>">
+                    <input type="hidden" name="data" value="<?php echo htmlspecialchars((string)$data); ?>">
+                    <input type="hidden" name="action" value="assignar">
+                    <input type="hidden" name="id" id="assignarId" value="0">
+
+                    <div class="d-grid gap-2">
+                        <?php foreach ($tecnics_disponibles as $t) : ?>
+                            <button type="submit" class="btn btn-outline-primary" name="tecnic" value="<?php echo htmlspecialchars((string)$t); ?>">
+                                <?php echo htmlspecialchars((string)$t); ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        var modal = document.getElementById('assignarModal');
+        if (!modal) return;
+
+        modal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget;
+            if (!button) return;
+            var id = button.getAttribute('data-incidencia-id') || '0';
+
+            var input = document.getElementById('assignarId');
+            var label = document.getElementById('assignarIncidenciaId');
+            if (input) input.value = id;
+            if (label) label.textContent = id;
+        });
+    })();
+</script>
 
 <?php include 'footer.php'; ?>
