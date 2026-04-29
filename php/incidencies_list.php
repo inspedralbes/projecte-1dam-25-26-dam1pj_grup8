@@ -18,17 +18,51 @@ function mostrar_incidencies(mysqli $conn): void
         }
     }
 
+// columna_existeix similar a la que hay en otros archivos
+if (!function_exists('columna_existeix')) {
+    function columna_existeix(mysqli $conn, string $taula, string $columna): bool
+    {
+        $taula_escapada = $conn->real_escape_string($taula);
+        $columna_escapada = $conn->real_escape_string($columna);
+        $result = $conn->query("SHOW COLUMNS FROM `$taula_escapada` LIKE '$columna_escapada'");
+        if ($result === false) {
+            return false;
+        }
+
+        $existeix = ($result->num_rows > 0);
+        $result->free();
+        return $existeix;
+    }
+}
+
     if (!taula_existeix($conn, 'incidencies')) {
         $create_sql = "CREATE TABLE IF NOT EXISTS incidencies (
             id INT AUTO_INCREMENT PRIMARY KEY,
             departament VARCHAR(80) NOT NULL,
             descripcio_curta VARCHAR(255) NOT NULL,
             data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
 
         if ($conn->query($create_sql) === false) {
             echo "<div class='alert alert-warning' role='alert'>No s'ha pogut assegurar la taula incidencies: " . htmlspecialchars($conn->error) . "</div>";
             return;
+        }
+    }
+
+    // Afegir noves columnes si falten
+    $adds = [];
+    if (!columna_existeix($conn, 'incidencies', 'Incidencia_asignada')) {
+        $adds[] = "ADD COLUMN Incidencia_asignada TINYINT(1) NOT NULL DEFAULT 0";
+    }
+    if (!columna_existeix($conn, 'incidencies', 'tecnic_assignat')) {
+        $adds[] = "ADD COLUMN tecnic_assignat VARCHAR(100) DEFAULT NULL";
+    }
+    if (!empty($adds)) {
+        $alter = 'ALTER TABLE incidencies ' . implode(', ', $adds);
+        if ($conn->query($alter) === false) {
+            echo "<div class='alert alert-warning' role='alert'>No s'han pogut afegir columnes a incidencies: " . htmlspecialchars($conn->error) . "</div>";
+            // continue; no return — we can still try to show existing rows
         }
     }
 

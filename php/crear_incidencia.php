@@ -80,6 +80,22 @@ function crear_incidencia(mysqli $conn): array
 		}
 	}
 
+	// Afegir noves columnes si falten (Incidencia_asignada, tecnic_assignat)
+	$cols_to_add = [];
+	if (!columna_existeix($conn, 'incidencies', 'Incidencia_asignada')) {
+		$cols_to_add[] = "ADD COLUMN Incidencia_asignada TINYINT(1) NOT NULL DEFAULT 0";
+	}
+	if (!columna_existeix($conn, 'incidencies', 'tecnic_assignat')) {
+		$cols_to_add[] = "ADD COLUMN tecnic_assignat VARCHAR(100) DEFAULT NULL";
+	}
+	if (!empty($cols_to_add)) {
+		$alter_sql = 'ALTER TABLE incidencies ' . implode(', ', $cols_to_add);
+		if ($conn->query($alter_sql) === false) {
+			echo "<div class='alert alert-warning' role='alert'>No s'han pogut afegir columnes a incidencies: " . htmlspecialchars($conn->error) . "</div>";
+			// no retornem; intentem continuar
+		}
+	}
+
 	if (!columna_existeix($conn, 'incidencies', 'departament') || !columna_existeix($conn, 'incidencies', 'descripcio_curta')) {
 		return [
 			'type' => 'error',
