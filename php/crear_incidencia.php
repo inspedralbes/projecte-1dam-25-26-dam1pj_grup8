@@ -2,32 +2,7 @@
 
 require_once 'connexio.php';
 
-function taula_existeix(mysqli $conn, string $taula): bool
-{
-	$taula_escapada = $conn->real_escape_string($taula);
-	$result = $conn->query("SHOW TABLES LIKE '$taula_escapada'");
-	if ($result === false) {
-		return false;
-	}
-
-	$existeix = ($result->num_rows > 0);
-	$result->free();
-	return $existeix;
-}
-
-function columna_existeix(mysqli $conn, string $taula, string $columna): bool
-{
-	$taula_escapada = $conn->real_escape_string($taula);
-	$columna_escapada = $conn->real_escape_string($columna);
-	$result = $conn->query("SHOW COLUMNS FROM `$taula_escapada` LIKE '$columna_escapada'");
-	if ($result === false) {
-		return false;
-	}
-
-	$existeix = ($result->num_rows > 0);
-	$result->free();
-	return $existeix;
-}
+require_once 'incidencies_schema.php';
 
 function longitud(string $text): int
 {
@@ -40,6 +15,14 @@ function longitud(string $text): int
 
 function crear_incidencia(mysqli $conn): array
 {
+	$schema_result = ensure_incidencies_schema($conn);
+	if (!is_array($schema_result) || ($schema_result['ok'] ?? false) !== true) {
+		return [
+			'type' => 'error',
+			'message_html' => "No s'ha pogut inicialitzar l'esquema d'incidències: " . htmlspecialchars((string)($schema_result['error'] ?? 'Error desconegut')),
+		];
+	}
+
 	$departament = trim((string)($_POST['departament'] ?? ''));
 	$descripcio_curta = trim((string)($_POST['descripcio_curta'] ?? ''));
 
@@ -63,46 +46,6 @@ function crear_incidencia(mysqli $conn): array
 			'message_html' => 'La descripció és massa llarga (màxim 255 caràcters).',
 		];
 	}
-
-	if (!taula_existeix($conn, 'incidencies')) {
-		$create_sql = "CREATE TABLE IF NOT EXISTS incidencies (
-			id INT AUTO_INCREMENT PRIMARY KEY,
-			departament VARCHAR(80) NOT NULL,
-			descripcio_curta VARCHAR(255) NOT NULL,
-			data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
-
-		if ($conn->query($create_sql) === false) {
-			return [
-				'type' => 'error',
-				'message_html' => "No s'ha pogut crear la taula <strong>incidencies</strong>: " . htmlspecialchars($conn->error),
-			];
-		}
-	}
-
-	// Afegir noves columnes si falten (Incidencia_asignada, tecnic_assignat)
-	$cols_to_add = [];
-	if (!columna_existeix($conn, 'incidencies', 'Incidencia_asignada')) {
-		$cols_to_add[] = "ADD COLUMN Incidencia_asignada TINYINT(1) NOT NULL DEFAULT 0";
-	}
-	if (!columna_existeix($conn, 'incidencies', 'tecnic_assignat')) {
-		$cols_to_add[] = "ADD COLUMN tecnic_assignat VARCHAR(100) DEFAULT NULL";
-	}
-	if (!empty($cols_to_add)) {
-		$alter_sql = 'ALTER TABLE incidencies ' . implode(', ', $cols_to_add);
-		if ($conn->query($alter_sql) === false) {
-			echo "<div class='alert alert-warning' role='alert'>No s'han pogut afegir columnes a incidencies: " . htmlspecialchars($conn->error) . "</div>";
-			// no retornem; intentem continuar
-		}
-	}
-
-	if (!columna_existeix($conn, 'incidencies', 'departament') || !columna_existeix($conn, 'incidencies', 'descripcio_curta')) {
-		return [
-			'type' => 'error',
-			'message_html' => "La taula <strong>incidencies</strong> existeix però no té l'esquema esperat (falten columnes). Reinicialitza la BD (esborrant <code>db_data/</code>) o actualitza la taula via Adminer perquè tingui: <code>departament</code>, <code>descripcio_curta</code> i <code>data_incidencia</code>.",
-		];
-	}
-
 	$sql = "INSERT INTO incidencies (departament, descripcio_curta) VALUES (?, ?)";
 	$stmt = $conn->prepare($sql);
 	if ($stmt === false) {
