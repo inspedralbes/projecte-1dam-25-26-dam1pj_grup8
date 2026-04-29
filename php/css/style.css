@@ -1,5 +1,36 @@
+.home-page,
+body {
+    min-height: 100vh;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+.site-footer {
+    margin-top: auto;
+}
+
+.home-page {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.home-page .navbar,
+.home-page .site-footer {
+    flex: 0 0 auto;
+}
+
+.home-page .hero-header {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+}
+
 .hero-header {
-    height: 100vh;
+    height: auto;
     width: 100%;
     display: flex;
     align-items: center;
@@ -27,6 +58,7 @@
     position: relative;
     z-index: 2;
     max-width: 800px;
+    padding: 1rem;
 }
 
 .btn-custom {
@@ -48,6 +80,24 @@
     gap: 15px;
     align-items: center;
 }
+
+.home-page .hero-content h1 {
+    margin-bottom: 1rem;
+}
+
+.home-page .hero-content #enterBtn {
+    margin-top: 0;
+}
+
+.home-page .hero-roles {
+    gap: 0.75rem;
+}
+
+.home-page .hero-roles .btn-custom {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
 /* FOOTER */
 .site-footer{
     background: rgb(34,40,49);

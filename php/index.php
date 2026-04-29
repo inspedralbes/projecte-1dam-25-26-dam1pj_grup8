@@ -1,3 +1,4 @@
+<?php $bodyClass = 'home-page'; ?>
 <?php include 'header.php'; ?>
 
 <?php $bgImage = "img/header.webp"; ?>

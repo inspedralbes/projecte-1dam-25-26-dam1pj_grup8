@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/tecnic.css">
 </head>
 
-<body>
+<body class="<?php echo isset($bodyClass) ? $bodyClass : ''; ?>">
 
 <nav class="navbar navbar-dark bg-dark">
     <div class="container">
