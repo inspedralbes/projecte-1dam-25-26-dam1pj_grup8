@@ -92,3 +92,38 @@ body {
         padding: 10px;
     }
 }
+body{
+background:#f4f7fb;
+}
+
+.stat-card{
+background:white;
+border-radius:20px;
+padding:35px;
+text-align:center;
+box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+.stat-card h2{
+font-size:48px;
+font-weight:700;
+margin-top:15px;
+}
+
+.chart-box{
+background:white;
+padding:30px;
+border-radius:20px;
+box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+.table-box{
+background:white;
+padding:30px;
+border-radius:20px;
+box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+canvas{
+max-height:420px;
+}
