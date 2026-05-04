@@ -2,6 +2,7 @@
 
 require_once 'connexio.php';
 require_once 'incidencies_schema.php';
+require_once 'tecnic_schema.php';
 
 $schema_result = ensure_incidencies_schema($conn);
 $alert = null;
@@ -11,6 +12,16 @@ if (!is_array($schema_result) || ($schema_result['ok'] ?? false) !== true) {
         'type' => 'danger',
         'message' => "No s'ha pogut inicialitzar l'esquema d'incidències: " . (string)($schema_result['error'] ?? 'Error desconegut'),
     ];
+}
+
+if ($alert === null) {
+    $tecnic_schema_result = ensure_tecnic_schema($conn);
+    if (!is_array($tecnic_schema_result) || ($tecnic_schema_result['ok'] ?? false) !== true) {
+        $alert = [
+            'type' => 'danger',
+            'message' => "No s'ha pogut inicialitzar l'esquema de tècnics: " . (string)($tecnic_schema_result['error'] ?? 'Error desconegut'),
+        ];
+    }
 }
 
 $sort = (string)($_POST['sort'] ?? $_GET['sort'] ?? 'data');
