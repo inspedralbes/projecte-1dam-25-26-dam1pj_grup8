@@ -2,6 +2,36 @@ body {
     background-color: rgb(238, 238, 238);
 }
 
+.scrollable-panel {
+    max-height: 180px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.scrollable-list {
+    max-height: 340px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.scrollable-list table {
+    margin-bottom: 0;
+}
+
+.pagination {
+    gap: 0.25rem;
+}
+
+.pagination .page-link {
+    color: rgb(34, 40, 49);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: rgb(34, 40, 49);
+    border-color: rgb(34, 40, 49);
+    color: rgb(238, 238, 238);
+}
+
 /* CONTENEDOR PRINCIPAL */
 .tecnic-hero {
     height: calc(100vh - 56px);

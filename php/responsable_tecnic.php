@@ -45,6 +45,8 @@ $sort = (string)($_POST['sort'] ?? $_GET['sort'] ?? 'data');
 $dir = strtolower((string)($_POST['dir'] ?? $_GET['dir'] ?? 'desc'));
 $q = trim((string)($_POST['q'] ?? $_GET['q'] ?? ''));
 $data = trim((string)($_POST['data'] ?? $_GET['data'] ?? ''));
+$historial_page = max(1, (int)($_POST['historial_page'] ?? $_GET['historial_page'] ?? 1));
+$historial_per_page = 10;
 
 $sort_valids = ['id', 'departament', 'data'];
 if (!in_array($sort, $sort_valids, true)) {
@@ -110,7 +112,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         return;
     }
 
-    echo "<div class='table-responsive'>";
+    echo "<div class='table-responsive scrollable-list'>";
     echo "<table class='table table-sm table-striped align-middle'>";
     echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Data</th>";
     if ($mode !== 'pendent') {
@@ -162,6 +164,57 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
     }
 
     echo "</tbody></table></div>";
+}
+
+function render_historial_pagination(int $current_page, int $total_pages, array $filters): void
+{
+    if ($total_pages <= 1) {
+        return;
+    }
+
+    $base_params = [
+        'sort' => (string)($filters['sort'] ?? 'data'),
+        'dir' => (string)($filters['dir'] ?? 'desc'),
+        'q' => (string)($filters['q'] ?? ''),
+        'data' => (string)($filters['data'] ?? ''),
+    ];
+
+    echo "<nav aria-label='Paginació historial' class='mt-3'>";
+    echo "<ul class='pagination pagination-sm mb-0 flex-wrap'>";
+
+    $prev_disabled = $current_page <= 1 ? ' disabled' : '';
+    $prev_query = htmlspecialchars(http_build_query($base_params + ['historial_page' => max(1, $current_page - 1)]));
+    echo "<li class='page-item{$prev_disabled}'><a class='page-link' href='?{$prev_query}'>Anterior</a></li>";
+
+    $start_page = max(1, $current_page - 2);
+    $end_page = min($total_pages, $current_page + 2);
+    if ($start_page > 1) {
+        $first_query = htmlspecialchars(http_build_query($base_params + ['historial_page' => 1]));
+        echo "<li class='page-item'><a class='page-link' href='?{$first_query}'>1</a></li>";
+        if ($start_page > 2) {
+            echo "<li class='page-item disabled'><span class='page-link'>…</span></li>";
+        }
+    }
+
+    for ($page = $start_page; $page <= $end_page; $page++) {
+        $active = $page === $current_page ? ' active' : '';
+        $query = htmlspecialchars(http_build_query($base_params + ['historial_page' => $page]));
+        echo "<li class='page-item{$active}'><a class='page-link' href='?{$query}'>{$page}</a></li>";
+    }
+
+    if ($end_page < $total_pages) {
+        if ($end_page < $total_pages - 1) {
+            echo "<li class='page-item disabled'><span class='page-link'>…</span></li>";
+        }
+        $last_query = htmlspecialchars(http_build_query($base_params + ['historial_page' => $total_pages]));
+        echo "<li class='page-item'><a class='page-link' href='?{$last_query}'>{$total_pages}</a></li>";
+    }
+
+    $next_disabled = $current_page >= $total_pages ? ' disabled' : '';
+    $next_query = htmlspecialchars(http_build_query($base_params + ['historial_page' => min($total_pages, $current_page + 1)]));
+    echo "<li class='page-item{$next_disabled}'><a class='page-link' href='?{$next_query}'>Següent</a></li>";
+
+    echo "</ul></nav>";
 }
 
 $pending_rows = [];
@@ -283,11 +336,32 @@ if ($alert === null) {
         $where_sql3 .= ' AND ' . implode(' AND ', $where_parts3);
     }
     $order_col3 = $order_map_history[$sort] ?? 'data_hist';
-    $sql3 = "SELECT id, departament, descripcio_curta, COALESCE(data_tancament, data_incidencia) AS data_hist, tecnic_assignat FROM incidencies WHERE $where_sql3 ORDER BY $order_col3 $dir";
+    $count_sql3 = "SELECT COUNT(*) AS total FROM incidencies WHERE $where_sql3";
+    $total_history_rows = 0;
+    $stmt3_count = $conn->prepare($count_sql3);
+    if ($stmt3_count !== false) {
+        $bind_types3_count = 's' . $types3;
+        $bind_values3_count = array_merge([$estat_tancada], $params3);
+        $stmt3_count->bind_param($bind_types3_count, ...$bind_values3_count);
+        if ($stmt3_count->execute()) {
+            $resCount = $stmt3_count->get_result();
+            if ($resCount !== false) {
+                $countRow = $resCount->fetch_assoc();
+                $total_history_rows = (int)($countRow['total'] ?? 0);
+            }
+        }
+        $stmt3_count->close();
+    }
+
+    $total_history_pages = max(1, (int)ceil($total_history_rows / $historial_per_page));
+    $historial_page = min($historial_page, $total_history_pages);
+    $historial_offset = ($historial_page - 1) * $historial_per_page;
+
+    $sql3 = "SELECT id, departament, descripcio_curta, COALESCE(data_tancament, data_incidencia) AS data_hist, tecnic_assignat FROM incidencies WHERE $where_sql3 ORDER BY $order_col3 $dir LIMIT ? OFFSET ?";
     $stmt3 = $conn->prepare($sql3);
     if ($stmt3 !== false) {
-        $bind_types3 = 's' . $types3;
-        $bind_values3 = array_merge([$estat_tancada], $params3);
+        $bind_types3 = 's' . $types3 . 'ii';
+        $bind_values3 = array_merge([$estat_tancada], $params3, [$historial_per_page, $historial_offset]);
         $stmt3->bind_param($bind_types3, ...$bind_values3);
         if ($stmt3->execute()) {
             $res = $stmt3->get_result();
@@ -374,6 +448,10 @@ if ($alert === null) {
     <div class="card card-body mb-4">
         <h2 class="h5 mb-3">Historial (totes)</h2>
         <?php render_table_responsable($history_rows, 'historial', $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data]); ?>
+        <?php render_historial_pagination($historial_page, $total_history_pages ?? 1, $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data]); ?>
+        <?php if (isset($total_history_rows)) : ?>
+            <div class="form-text mt-2">Mostrant <?php echo min($historial_per_page, max(0, $total_history_rows - (($historial_page - 1) * $historial_per_page))); ?> de <?php echo (int)$total_history_rows; ?> registres.</div>
+        <?php endif; ?>
     </div>
 
     <a class="btn btn-outline-secondary" href="index.php">Tornar</a>
