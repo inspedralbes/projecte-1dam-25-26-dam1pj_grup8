@@ -87,54 +87,75 @@ function ensure_tecnic_schema(mysqli $conn): array
 		}
 	}
 
-	// Seed minimal default staff, only when needed:
-	// - If the table is empty: add both Responsable (ENCARGADO) and one Tècnic.
-	// - If there are technicians but no ENCARGADO: add only the Responsable.
-	$total_tecnics = null;
-	$res_count = $conn->query('SELECT COUNT(*) AS total FROM TECNIC');
-	if ($res_count !== false) {
-		$row = $res_count->fetch_assoc();
-		$total_tecnics = (int)($row['total'] ?? 0);
-		$res_count->free();
-	}
+	// Seed default staff (Alex, Berta, Carles, Dina) used in the UI dropdowns.
+	// We insert them only if they don't exist (by EMAIL) to avoid duplicates.
+	$seed = [
+		[
+			'first' => 'Alex',
+			'last' => 'Serra',
+			'email' => 'alex.serra@exemple.local',
+			'password' => 'demo',
+			'phone' => '600000001',
+			'rol' => 'ENCARGADO',
+		],
+		[
+			'first' => 'Berta',
+			'last' => 'Roca',
+			'email' => 'berta.roca@exemple.local',
+			'password' => 'demo',
+			'phone' => '600000002',
+			'rol' => 'TECNICO',
+		],
+		[
+			'first' => 'Carles',
+			'last' => 'Pujol',
+			'email' => 'carles.pujol@exemple.local',
+			'password' => 'demo',
+			'phone' => '600000003',
+			'rol' => 'TECNICO',
+		],
+		[
+			'first' => 'Dina',
+			'last' => 'Vila',
+			'email' => 'dina.vila@exemple.local',
+			'password' => 'demo',
+			'phone' => '600000004',
+			'rol' => 'TECNICO',
+		],
+	];
 
-	$needs_seed_all = ($total_tecnics === 0);
-	$needs_seed_responsable = false;
-	if ($total_tecnics !== null && $total_tecnics > 0) {
-		$res_enc = $conn->query("SELECT 1 FROM TECNIC WHERE ROL_EMPLOYEE = 'ENCARGADO' LIMIT 1");
-		if ($res_enc !== false) {
-			$needs_seed_responsable = ($res_enc->num_rows === 0);
-			$res_enc->free();
+	$select_stmt = $conn->prepare('SELECT TECNIC_ID FROM TECNIC WHERE EMAIL = ? LIMIT 1');
+	$insert_stmt = $conn->prepare('INSERT INTO TECNIC (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROL_EMPLOYEE) VALUES (?, ?, ?, ?, ?, ?)');
+
+	if ($select_stmt !== false && $insert_stmt !== false) {
+		foreach ($seed as $user) {
+			$email = (string)$user['email'];
+			$select_stmt->bind_param('s', $email);
+			if ($select_stmt->execute()) {
+				$res = $select_stmt->get_result();
+				$exists = ($res !== false && $res->num_rows > 0);
+				if ($res !== false) {
+					$res->free();
+				}
+
+				if (!$exists) {
+					$first = (string)$user['first'];
+					$last = (string)$user['last'];
+					$password = (string)$user['password'];
+					$phone = (string)$user['phone'];
+					$rol = (string)$user['rol'];
+					$insert_stmt->bind_param('ssssss', $first, $last, $email, $password, $phone, $rol);
+					$insert_stmt->execute();
+				}
+			}
 		}
 	}
 
-	if ($needs_seed_all || $needs_seed_responsable) {
-		$insert_stmt = $conn->prepare('INSERT INTO TECNIC (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROL_EMPLOYEE) VALUES (?, ?, ?, ?, ?, ?)');
-		if ($insert_stmt !== false) {
-			if ($needs_seed_all || $needs_seed_responsable) {
-				$first = 'Responsable';
-				$last = 'Tècnic';
-				$email = 'responsable@local';
-				$password = 'responsable';
-				$phone = '000000000';
-				$rol = 'ENCARGADO';
-				$insert_stmt->bind_param('ssssss', $first, $last, $email, $password, $phone, $rol);
-				$insert_stmt->execute();
-			}
-
-			if ($needs_seed_all) {
-				$first = 'Tècnic';
-				$last = '1';
-				$email = 'tecnic1@local';
-				$password = 'tecnic';
-				$phone = '000000001';
-				$rol = 'TECNICO';
-				$insert_stmt->bind_param('ssssss', $first, $last, $email, $password, $phone, $rol);
-				$insert_stmt->execute();
-			}
-
-			$insert_stmt->close();
-		}
+	if ($select_stmt !== false) {
+		$select_stmt->close();
+	}
+	if ($insert_stmt !== false) {
+		$insert_stmt->close();
 	}
 
 	return [

@@ -70,10 +70,20 @@ ALTER TABLE TECNIC ADD COLUMN IF NOT EXISTS ROL_EMPLOYEE ENUM('ENCARGADO','TECNI
 
 -- Dades inicials (només primer cop). Si el teu entorn ja tenia volum, mira `php/tecnic_schema.php`.
 INSERT INTO TECNIC (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROL_EMPLOYEE)
-VALUES ('Responsable', 'Tècnic', 'responsable@local', 'responsable', '000000000', 'ENCARGADO');
+SELECT 'Alex', 'Serra', 'alex.serra@exemple.local', 'demo', '600000001', 'ENCARGADO'
+WHERE NOT EXISTS (SELECT 1 FROM TECNIC WHERE EMAIL = 'alex.serra@exemple.local');
 
 INSERT INTO TECNIC (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROL_EMPLOYEE)
-VALUES ('Tècnic', '1', 'tecnic1@local', 'tecnic', '000000001', 'TECNICO');
+SELECT 'Berta', 'Roca', 'berta.roca@exemple.local', 'demo', '600000002', 'TECNICO'
+WHERE NOT EXISTS (SELECT 1 FROM TECNIC WHERE EMAIL = 'berta.roca@exemple.local');
+
+INSERT INTO TECNIC (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROL_EMPLOYEE)
+SELECT 'Carles', 'Pujol', 'carles.pujol@exemple.local', 'demo', '600000003', 'TECNICO'
+WHERE NOT EXISTS (SELECT 1 FROM TECNIC WHERE EMAIL = 'carles.pujol@exemple.local');
+
+INSERT INTO TECNIC (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROL_EMPLOYEE)
+SELECT 'Dina', 'Vila', 'dina.vila@exemple.local', 'demo', '600000004', 'TECNICO'
+WHERE NOT EXISTS (SELECT 1 FROM TECNIC WHERE EMAIL = 'dina.vila@exemple.local');
 
 
 
