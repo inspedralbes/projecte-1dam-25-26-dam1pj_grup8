@@ -17,6 +17,21 @@
 <nav class="navbar navbar-dark bg-dark">
     <div class="container">
         <a class="navbar-brand" href="index.php">Institut Pedralbes</a>
+        <?php if ((isset($showCrearUsuariButton) && $showCrearUsuariButton === true) || (isset($showUsuarisButton) && $showUsuarisButton === true)) : ?>
+            <div class="d-flex gap-2 ms-auto">
+                <?php if (isset($showUsuarisButton) && $showUsuarisButton === true) : ?>
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#usuarisModal">
+                        Usuaris
+                    </button>
+                <?php endif; ?>
+
+                <?php if (isset($showCrearUsuariButton) && $showCrearUsuariButton === true) : ?>
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#crearUsuariModal">
+                        Crear Usuari
+                    </button>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
 </nav>
 <script src="js/hero.js"></script>

@@ -5,6 +5,8 @@
         <p class="mb-0">
             Asier Pozo · Paula Paz · Alex Bermudez
         </p>
+
+        
     </div>
 </footer>
 
