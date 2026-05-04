@@ -1,5 +1,5 @@
-let trendChart;
-let pagesChart;
+let incidenciesStatusChart;
+let incidenciesTypePriorityChart;
 
 
 async function cargarStats(){
@@ -9,21 +9,39 @@ let fin=document.getElementById('fecha_fin').value;
 let usuario=document.getElementById('usuario').value;
 let pagina=document.getElementById('pagina').value;
 
+// Validar que si hay una fecha, la otra también debe existir
+if ((inicio && !fin) || (!inicio && fin)) {
+  alert('Les datas de inici i fi han de ser vàlides');
+  return;
+}
 
-let url=`admin_stats.php?
-inicio=${inicio}
-&fin=${fin}
-&usuario=${usuario}
-&pagina=${pagina}`;
+const params = new URLSearchParams({
+inicio: (inicio || '').trim(),
+fin: (fin || '').trim(),
+usuario: (usuario || '').trim(),
+pagina: (pagina || '').trim()
+});
+
+let url=`admin_stats.php?${params.toString()}`;
 
 
 let r=await fetch(url);
 let data=await r.json();
 
 
-document.getElementById('totalAccess').innerText=data.total;
-document.getElementById('totalPages').innerText=data.pagesCount;
-document.getElementById('activeUsers').innerText=data.usersCount;
+// Si hay filtro de fechas, mostrar totales de incidencias
+const hasDateFilter = (inicio && fin);
+const hasIncidenciesData = Array.isArray(data.incidencies?.status) && data.incidencies.status.length > 0;
+if (hasDateFilter && hasIncidenciesData) {
+  const totalIncidencies = data.incidencies.status.reduce((sum, item) => sum + parseInt(item.total || 0), 0);
+  document.getElementById('totalAccess').innerText = totalIncidencies;
+  document.getElementById('totalPages').innerText = '(Incidències filtrades)';
+  document.getElementById('activeUsers').innerText = data.incidencies.status.length + ' estat(s)';
+} else {
+  document.getElementById('totalAccess').innerText=data.total;
+  document.getElementById('totalPages').innerText=data.pagesCount;
+  document.getElementById('activeUsers').innerText=data.usersCount;
+}
 
 
 
@@ -56,37 +74,79 @@ document.getElementById('pagesTable').innerHTML=pagesHTML;
 
 
 
-if(trendChart) trendChart.destroy();
+const statusData = Array.isArray(data.incidencies?.status) ? data.incidencies.status : [];
+const statusLabels = {
+pendent_assignar: 'Pendent',
+assignada: 'Assignada',
+tancada: 'Tancada'
+};
+const statusColors = {
+pendent_assignar: '#60a5fa',
+assignada: '#001f3f',
+tancada: '#22c55e'
+};
 
-trendChart=new Chart(
-document.getElementById('trendChart'),
+if(incidenciesStatusChart) incidenciesStatusChart.destroy();
+
+incidenciesStatusChart=new Chart(
+document.getElementById('incidenciesStatusChart'),
 {
-type:'line',
+type:'doughnut',
 data:{
-labels:data.trend.map(x=>x.dia),
+labels:statusData.map(x=>statusLabels[x.estat] || x.estat),
 datasets:[{
-label:'Accessos',
-data:data.trend.map(x=>x.total),
-tension:0.4
+label:'Incidències',
+data:statusData.map(x=>x.total),
+backgroundColor:statusData.map(x=>statusColors[x.estat] || '#cccccc'),
+borderWidth:0
 }]
+},
+options:{
+responsive:true,
+plugins:{
+legend:{position:'bottom'}
+}
 }
 }
 );
 
 
 
-if(pagesChart) pagesChart.destroy();
+if(incidenciesTypePriorityChart) incidenciesTypePriorityChart.destroy();
 
-pagesChart=new Chart(
-document.getElementById('pagesChart'),
+incidenciesTypePriorityChart=new Chart(
+document.getElementById('incidenciesTypePriorityChart'),
 {
 type:'bar',
 data:{
-labels:data.pages.map(x=>x.page),
+labels:Array.isArray(data.incidencies?.deptLabels) ? data.incidencies.deptLabels : [],
 datasets:[{
-label:'Visites',
-data:data.pages.map(x=>x.total)
+label:'Alta',
+data:Array.isArray(data.incidencies?.deptPriority?.Alta) ? data.incidencies.deptPriority.Alta : [],
+backgroundColor:'#001f3f',
+stack:'priority'
+},{
+label:'Mitja',
+data:Array.isArray(data.incidencies?.deptPriority?.Mitja) ? data.incidencies.deptPriority.Mitja : [],
+backgroundColor:'#60a5fa',
+stack:'priority'
+},{
+label:'Baixa',
+data:Array.isArray(data.incidencies?.deptPriority?.Baixa) ? data.incidencies.deptPriority.Baixa : [],
+backgroundColor:'#0bedf5',
+stack:'priority'
 }]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+scales:{
+x:{stacked:true},
+y:{stacked:true,beginAtZero:true}
+},
+plugins:{
+legend:{position:'bottom'}
+}
 }
 }
 );

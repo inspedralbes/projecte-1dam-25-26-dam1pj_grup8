@@ -102,6 +102,10 @@ border-radius:20px;
 padding:35px;
 text-align:center;
 box-shadow:0 4px 15px rgba(0,0,0,.08);
+min-height:200px;
+display:flex;
+flex-direction:column;
+justify-content:center;
 }
 
 .stat-card h2{
@@ -115,6 +119,14 @@ background:white;
 padding:30px;
 border-radius:20px;
 box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+.chart-box-compact{
+min-height:420px;
+}
+
+.chart-box canvas{
+width:100% !important;
 }
 
 .table-box{

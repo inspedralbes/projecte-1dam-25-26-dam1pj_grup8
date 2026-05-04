@@ -26,6 +26,23 @@ if (!is_array($schema_result) || ($schema_result['ok'] ?? false) !== true) {
 
 $allowed_roles = ['TECNIC', 'ADMIN', 'RESPONSABLE', 'PROFESSOR'];
 
+$tecnics_disponibles = [];
+if ($schema_ok) {
+    $tecnic_schema_result = ensure_tecnic_schema($conn);
+    if (is_array($tecnic_schema_result) && ($tecnic_schema_result['ok'] ?? false) === true) {
+        $tecnics_query = $conn->query("SELECT FIRST_NAME, LAST_NAME FROM TECNIC ORDER BY FIRST_NAME, LAST_NAME");
+        if ($tecnics_query !== false) {
+            while ($row = $tecnics_query->fetch_assoc()) {
+                $label = trim((string)($row['FIRST_NAME'] ?? '') . ' ' . (string)($row['LAST_NAME'] ?? ''));
+                if ($label !== '') {
+                    $tecnics_disponibles[] = $label;
+                }
+            }
+            $tecnics_query->free();
+        }
+    }
+}
+
 $usuaris_rows = [];
 $selected_usuari = null;
 $open_usuari_detail_modal = false;
@@ -315,8 +332,15 @@ if ($schema_ok) {
 
             <div class="col-md-4">
                 <label class="form-label">Usuari</label>
-                <input type="text" id="usuario" class="form-control"
-                    placeholder="Filtrar per usuari">
+                <select id="usuario" class="form-control">
+                    <option value="">-- Tots els tècnics --</option>
+                    <?php
+                    foreach ($tecnics_disponibles as $tecnic) {
+                        $tecnic_escaped = htmlspecialchars($tecnic);
+                        echo '<option value="' . $tecnic_escaped . '">' . $tecnic_escaped . '</option>';
+                    }
+                    ?>
+                </select>
             </div>
 
             <div class="col-md-8">
@@ -365,17 +389,17 @@ if ($schema_ok) {
     <!-- GRAFICOS -->
     <div class="row g-4 mb-5">
 
-        <div class="col-md-6">
-            <div class="chart-box">
-                <h4>Tendència d'ús</h4>
-                <canvas id="trendChart"></canvas>
+        <div class="col-lg-5">
+            <div class="chart-box chart-box-compact">
+                <h4>Incidències per estat</h4>
+                <canvas id="incidenciesStatusChart"></canvas>
             </div>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-lg-7">
             <div class="chart-box">
-                <h4>Pàgines més visitades</h4>
-                <canvas id="pagesChart"></canvas>
+                <h4>Tipus d'incidència i prioritat</h4>
+                <canvas id="incidenciesTypePriorityChart"></canvas>
             </div>
         </div>
 
