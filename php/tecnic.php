@@ -69,6 +69,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
     $action = (string)($_POST['action'] ?? '');
     $id = (int)($_POST['id'] ?? 0);
 
+    if ($action === 'iniciar' && $id > 0) {
+        $stmt = $conn->prepare('UPDATE incidencies SET data_inici_tasca = NOW() WHERE id = ? AND estat = ? AND tecnic_assignat = ? AND data_inici_tasca IS NULL');
+        if ($stmt === false) {
+            $alert = ['type' => 'danger', 'message' => 'Error preparant la consulta: ' . $conn->error];
+        } else {
+            $estat_assignada = INCIDENCIA_ESTAT_ASSIGNADA;
+            $stmt->bind_param('iss', $id, $estat_assignada, $tecnic_actual);
+            if ($stmt->execute() && $stmt->affected_rows > 0) {
+                $alert = ['type' => 'success', 'message' => "Tasca iniciada per la incidència #$id."];
+            } else {
+                $alert = ['type' => 'warning', 'message' => "No s'ha pogut iniciar la tasca de la incidència #$id (potser ja està iniciada o no és teva)."];
+            }
+            $stmt->close();
+        }
+    }
+
     if ($action === 'tancar' && $id > 0) {
         $stmt = $conn->prepare('UPDATE incidencies SET estat = ?, data_tancament = NOW() WHERE id = ? AND estat = ? AND tecnic_assignat = ?');
         if ($stmt === false) {
@@ -87,7 +103,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
     }
 }
 
-function render_table_tecnic(array $rows, bool $show_close_action, array $filters): void
+function format_simple_datetime(?string $value): string
+{
+    if ($value === null || trim($value) === '') {
+        return "<span class='text-muted'>—</span>";
+    }
+
+    try {
+        $dt = new DateTime($value);
+        return htmlspecialchars($dt->format('Y-m-d H:i'));
+    } catch (Exception $e) {
+        return htmlspecialchars($value);
+    }
+}
+
+function format_simple_duration(?string $start, ?string $end): string
+{
+    if ($start === null || trim($start) === '' || $end === null || trim($end) === '') {
+        return "<span class='text-muted'>—</span>";
+    }
+
+    try {
+        $a = new DateTime($start);
+        $b = new DateTime($end);
+        $diff = $a->diff($b);
+        $totalMinutes = ((int)$diff->days * 24 * 60) + ((int)$diff->h * 60) + (int)$diff->i;
+        $hours = intdiv($totalMinutes, 60);
+        $minutes = $totalMinutes % 60;
+        if ($hours > 0) {
+            return htmlspecialchars($hours . 'h ' . $minutes . 'm');
+        }
+        return htmlspecialchars($minutes . 'm');
+    } catch (Exception $e) {
+        return "<span class='text-muted'>—</span>";
+    }
+}
+
+function render_table_tecnic(array $rows, bool $show_actions, array $filters): void
 {
     if (count($rows) === 0) {
         echo "<div class='text-muted'>No hi ha incidències per mostrar.</div>";
@@ -96,8 +148,8 @@ function render_table_tecnic(array $rows, bool $show_close_action, array $filter
 
     echo "<div class='table-responsive'>";
     echo "<table class='table table-sm table-striped align-middle'>";
-    echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Data</th>";
-    if ($show_close_action) {
+    echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Data</th><th scope='col'>Inici tasca</th><th scope='col'>Tancament</th><th scope='col'>Temps</th>";
+    if ($show_actions) {
         echo "<th scope='col'>Accions</th>";
     }
     echo "</tr></thead><tbody>";
@@ -107,15 +159,36 @@ function render_table_tecnic(array $rows, bool $show_close_action, array $filter
         $dep = htmlspecialchars((string)($row['departament'] ?? ''));
         $desc = htmlspecialchars((string)($row['descripcio_curta'] ?? ''));
         $data = htmlspecialchars((string)($row['data'] ?? ''));
+        $inici_tasca = (string)($row['data_inici_tasca'] ?? '');
+        $tancament = (string)($row['data_tancament'] ?? '');
 
         echo "<tr>";
         echo "<th scope='row'>$id</th>";
         echo "<td>$dep</td>";
         echo "<td>$desc</td>";
         echo "<td>$data</td>";
+        echo "<td>" . format_simple_datetime($inici_tasca !== '' ? $inici_tasca : null) . "</td>";
+        echo "<td>" . format_simple_datetime($tancament !== '' ? $tancament : null) . "</td>";
+        echo "<td>" . format_simple_duration($inici_tasca !== '' ? $inici_tasca : null, $tancament !== '' ? $tancament : null) . "</td>";
 
-        if ($show_close_action) {
+        if ($show_actions) {
             echo "<td>";
+
+            if ($inici_tasca === '') {
+                echo "<form method='POST' class='d-inline me-2'>";
+                echo "<input type='hidden' name='sort' value='" . htmlspecialchars((string)($filters['sort'] ?? '')) . "'>";
+                echo "<input type='hidden' name='dir' value='" . htmlspecialchars((string)($filters['dir'] ?? '')) . "'>";
+                echo "<input type='hidden' name='q' value='" . htmlspecialchars((string)($filters['q'] ?? '')) . "'>";
+                echo "<input type='hidden' name='data' value='" . htmlspecialchars((string)($filters['data'] ?? '')) . "'>";
+                echo "<input type='hidden' name='tecnic' value='" . htmlspecialchars((string)($filters['tecnic'] ?? '')) . "'>";
+                echo "<input type='hidden' name='action' value='iniciar'>";
+                echo "<input type='hidden' name='id' value='" . (int)$id . "'>";
+                echo "<button type='submit' class='btn btn-sm btn-outline-primary'>Iniciar</button>";
+                echo "</form>";
+            } else {
+                echo "<span class='text-muted me-2'>Iniciada</span>";
+            }
+
             echo "<form method='POST' class='d-inline'>";
             echo "<input type='hidden' name='sort' value='" . htmlspecialchars((string)($filters['sort'] ?? '')) . "'>";
             echo "<input type='hidden' name='dir' value='" . htmlspecialchars((string)($filters['dir'] ?? '')) . "'>";
@@ -137,8 +210,27 @@ function render_table_tecnic(array $rows, bool $show_close_action, array $filter
 
 $assigned_rows = [];
 $history_rows = [];
+$tecnic_info = null;
 
 if ($alert === null) {
+    $name_parts = preg_split('/\s+/', trim($tecnic_actual), 2);
+    $first_name = trim((string)($name_parts[0] ?? ''));
+    $last_name = trim((string)($name_parts[1] ?? ''));
+    if ($first_name !== '' && $last_name !== '') {
+        $stmt_tech = $conn->prepare('SELECT FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER, ROL_EMPLOYEE FROM TECNIC WHERE FIRST_NAME = ? AND LAST_NAME = ? LIMIT 1');
+        if ($stmt_tech !== false) {
+            $stmt_tech->bind_param('ss', $first_name, $last_name);
+            if ($stmt_tech->execute()) {
+                $resTech = $stmt_tech->get_result();
+                if ($resTech !== false) {
+                    $tecnic_info = $resTech->fetch_assoc() ?: null;
+                    $resTech->free();
+                }
+            }
+            $stmt_tech->close();
+        }
+    }
+
     $filters = [
         'sort' => $sort,
         'dir' => $dir,
@@ -194,7 +286,7 @@ if ($alert === null) {
         $where_sql .= ' AND ' . implode(' AND ', $where_parts);
     }
     $order_col = $order_map_assigned[$sort] ?? 'data_incidencia';
-    $sql1 = "SELECT id, departament, descripcio_curta, data_incidencia FROM incidencies WHERE $where_sql ORDER BY $order_col $dir";
+    $sql1 = "SELECT id, departament, descripcio_curta, data_incidencia, data_inici_tasca, data_tancament FROM incidencies WHERE $where_sql ORDER BY $order_col $dir";
     $stmt1 = $conn->prepare($sql1);
     if ($stmt1 !== false) {
         $bind_types = 'ss' . $types;
@@ -209,6 +301,8 @@ if ($alert === null) {
                         'departament' => $row['departament'],
                         'descripcio_curta' => $row['descripcio_curta'],
                         'data' => $row['data_incidencia'],
+                        'data_inici_tasca' => $row['data_inici_tasca'] ?? null,
+                        'data_tancament' => $row['data_tancament'] ?? null,
                     ];
                 }
             }
@@ -223,7 +317,7 @@ if ($alert === null) {
         $where_sql2 .= ' AND ' . implode(' AND ', $where_parts2);
     }
     $order_col2 = $order_map_history[$sort] ?? 'data_hist';
-    $sql2 = "SELECT id, departament, descripcio_curta, COALESCE(data_tancament, data_incidencia) AS data_hist FROM incidencies WHERE $where_sql2 ORDER BY $order_col2 $dir";
+    $sql2 = "SELECT id, departament, descripcio_curta, COALESCE(data_tancament, data_incidencia) AS data_hist, data_inici_tasca, data_tancament FROM incidencies WHERE $where_sql2 ORDER BY $order_col2 $dir";
     $stmt2 = $conn->prepare($sql2);
     if ($stmt2 !== false) {
         $bind_types2 = 'ss' . $types2;
@@ -238,6 +332,8 @@ if ($alert === null) {
                         'departament' => $row['departament'],
                         'descripcio_curta' => $row['descripcio_curta'],
                         'data' => $row['data_hist'],
+                        'data_inici_tasca' => $row['data_inici_tasca'] ?? null,
+                        'data_tancament' => $row['data_tancament'] ?? null,
                     ];
                 }
             }
@@ -309,6 +405,18 @@ if ($alert === null) {
             </div>
         </form>
         <div class="form-text">Aquests filtres s'apliquen a assignades i historial del tècnic seleccionat.</div>
+    </div>
+
+    <div class="card card-body mb-4">
+        <h2 class="h5 mb-3">Dades del tècnic</h2>
+        <?php if (is_array($tecnic_info)) : ?>
+            <div><strong>Nom:</strong> <?php echo htmlspecialchars((string)($tecnic_info['FIRST_NAME'] ?? '')); ?> <?php echo htmlspecialchars((string)($tecnic_info['LAST_NAME'] ?? '')); ?></div>
+            <div><strong>Email:</strong> <?php echo htmlspecialchars((string)($tecnic_info['EMAIL'] ?? '')); ?></div>
+            <div><strong>Telèfon:</strong> <?php echo htmlspecialchars((string)($tecnic_info['PHONE_NUMBER'] ?? '')); ?></div>
+            <div><strong>Rol:</strong> <?php echo htmlspecialchars((string)($tecnic_info['ROL_EMPLOYEE'] ?? '')); ?></div>
+        <?php else : ?>
+            <div class="text-muted">No hi ha dades del tècnic seleccionat en la taula TECNIC.</div>
+        <?php endif; ?>
     </div>
 
     <?php if (is_array($alert)) : ?>

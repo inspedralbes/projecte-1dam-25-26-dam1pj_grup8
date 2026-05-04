@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS incidencies (
   descripcio_curta VARCHAR(255) NOT NULL,
   estat VARCHAR(30) NOT NULL DEFAULT 'pendent_assignar',
   tecnic_assignat VARCHAR(80) NULL,
+  data_inici_tasca TIMESTAMP NULL DEFAULT NULL,
   data_tancament TIMESTAMP NULL DEFAULT NULL
 );
 
