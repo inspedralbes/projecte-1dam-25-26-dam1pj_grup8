@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS incidencies (
   departament VARCHAR(80) NOT NULL,
   data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   descripcio_curta VARCHAR(255) NOT NULL,
+  prioritat VARCHAR(10) NOT NULL DEFAULT 'mitja',
   estat VARCHAR(30) NOT NULL DEFAULT 'pendent_assignar',
   tecnic_assignat VARCHAR(80) NULL,
   data_inici_tasca TIMESTAMP NULL DEFAULT NULL,

@@ -78,12 +78,14 @@ const statusData = Array.isArray(data.incidencies?.status) ? data.incidencies.st
 const statusLabels = {
 pendent_assignar: 'Pendent',
 assignada: 'Assignada',
-tancada: 'Tancada'
+tancada: 'Tancada',
+rebutjada: 'Rebutjada'
 };
 const statusColors = {
 pendent_assignar: '#60a5fa',
 assignada: '#001f3f',
-tancada: '#22c55e'
+tancada: '#22c55e',
+rebutjada: '#ef4444'
 };
 
 if(incidenciesStatusChart) incidenciesStatusChart.destroy();

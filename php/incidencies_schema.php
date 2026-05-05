@@ -45,6 +45,19 @@ if (!defined('INCIDENCIA_ESTAT_ASSIGNADA')) {
 if (!defined('INCIDENCIA_ESTAT_TANCADA')) {
 	define('INCIDENCIA_ESTAT_TANCADA', 'tancada');
 }
+if (!defined('INCIDENCIA_ESTAT_REBUTJADA')) {
+	define('INCIDENCIA_ESTAT_REBUTJADA', 'rebutjada');
+}
+
+if (!defined('INCIDENCIA_PRIORITAT_BAIXA')) {
+	define('INCIDENCIA_PRIORITAT_BAIXA', 'baixa');
+}
+if (!defined('INCIDENCIA_PRIORITAT_MITJA')) {
+	define('INCIDENCIA_PRIORITAT_MITJA', 'mitja');
+}
+if (!defined('INCIDENCIA_PRIORITAT_ALTA')) {
+	define('INCIDENCIA_PRIORITAT_ALTA', 'alta');
+}
 
 if (!defined('INCIDENCIA_TECNIC_PER_DEFECTE')) {
 	// This project currently has role-based screens without per-user login.
@@ -59,6 +72,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 			id INT AUTO_INCREMENT PRIMARY KEY,
 			departament VARCHAR(80) NOT NULL,
 			descripcio_curta VARCHAR(255) NOT NULL,
+			prioritat VARCHAR(10) NOT NULL DEFAULT '" . INCIDENCIA_PRIORITAT_MITJA . "',
 			data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			estat VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_ESTAT_PENDENT_ASSIGNAR . "',
 			tecnic_assignat VARCHAR(80) NULL,
@@ -78,6 +92,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 	$required_columns = [
 		'departament' => "ALTER TABLE incidencies ADD COLUMN departament VARCHAR(80) NOT NULL",
 		'descripcio_curta' => "ALTER TABLE incidencies ADD COLUMN descripcio_curta VARCHAR(255) NOT NULL",
+		'prioritat' => "ALTER TABLE incidencies ADD COLUMN prioritat VARCHAR(10) NOT NULL DEFAULT '" . INCIDENCIA_PRIORITAT_MITJA . "'",
 		'data_incidencia' => "ALTER TABLE incidencies ADD COLUMN data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
 		'estat' => "ALTER TABLE incidencies ADD COLUMN estat VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_ESTAT_PENDENT_ASSIGNAR . "'",
 		'tecnic_assignat' => "ALTER TABLE incidencies ADD COLUMN tecnic_assignat VARCHAR(80) NULL",
@@ -102,6 +117,20 @@ function ensure_incidencies_schema(mysqli $conn): array
 		return [
 			'ok' => false,
 			'error' => "No s'ha pogut normalitzar la columna estat: " . $conn->error,
+		];
+	}
+
+	$valid_prioritats = [
+		INCIDENCIA_PRIORITAT_BAIXA,
+		INCIDENCIA_PRIORITAT_MITJA,
+		INCIDENCIA_PRIORITAT_ALTA,
+	];
+	$valid_list_sql = "'" . implode("','", array_map([$conn, 'real_escape_string'], $valid_prioritats)) . "'";
+	$normalized_prio_ok = $conn->query("UPDATE incidencies SET prioritat = '" . INCIDENCIA_PRIORITAT_MITJA . "' WHERE prioritat IS NULL OR prioritat = '' OR prioritat NOT IN ($valid_list_sql)");
+	if ($normalized_prio_ok === false) {
+		return [
+			'ok' => false,
+			'error' => "No s'ha pogut normalitzar la columna prioritat: " . $conn->error,
 		];
 	}
 

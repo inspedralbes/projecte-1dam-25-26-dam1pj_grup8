@@ -93,7 +93,7 @@ if ($res !== false) {
 }
 
 $incidenciesByDept = [];
-$res = $conn->query("SELECT departament, estat, COUNT(*) total FROM incidencies $incidenciesFilter GROUP BY departament, estat ORDER BY total DESC");
+$res = $conn->query("SELECT departament, prioritat, COUNT(*) total FROM incidencies $incidenciesFilter GROUP BY departament, prioritat ORDER BY total DESC");
 if ($res !== false) {
     while ($r = $res->fetch_assoc()) {
         $incidenciesByDept[] = $r;
@@ -102,15 +102,16 @@ if ($res !== false) {
 }
 
 $deptMatrix = [];
+
 $priorityMap = [
-    'pendent_assignar' => 'Alta',
-    'assignada' => 'Mitja',
-    'tancada' => 'Baixa',
+    'alta' => 'Alta',
+    'mitja' => 'Mitja',
+    'baixa' => 'Baixa',
 ];
 
 foreach ($incidenciesByDept as $row) {
     $dept = trim((string)($row['departament'] ?? ''));
-    $estat = (string)($row['estat'] ?? '');
+    $prioritat = strtolower(trim((string)($row['prioritat'] ?? '')));
     $totalDept = (int)($row['total'] ?? 0);
 
     if ($dept === '') {
@@ -121,7 +122,7 @@ foreach ($incidenciesByDept as $row) {
         $deptMatrix[$dept] = ['Alta' => 0, 'Mitja' => 0, 'Baixa' => 0, 'total' => 0];
     }
 
-    $priority = $priorityMap[$estat] ?? 'Mitja';
+    $priority = $priorityMap[$prioritat] ?? 'Mitja';
     $deptMatrix[$dept][$priority] += $totalDept;
     $deptMatrix[$dept]['total'] += $totalDept;
 }

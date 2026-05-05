@@ -64,6 +64,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
     $action = (string)($_POST['action'] ?? '');
     $id = (int)($_POST['id'] ?? 0);
 
+    $prioritats_valides = [
+        INCIDENCIA_PRIORITAT_BAIXA,
+        INCIDENCIA_PRIORITAT_MITJA,
+        INCIDENCIA_PRIORITAT_ALTA,
+    ];
+    $estats_editables = [
+        INCIDENCIA_ESTAT_PENDENT_ASSIGNAR,
+        INCIDENCIA_ESTAT_ASSIGNADA,
+    ];
+
     if ($id > 0 && $action === 'assignar') {
         $tecnic_assignacio = trim((string)($_POST['tecnic'] ?? ''));
         if ($tecnic_assignacio === '' || !in_array($tecnic_assignacio, $tecnics_disponibles, true)) {
@@ -83,6 +93,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
             }
             $stmt->close();
         }
+        }
+    }
+
+    if ($id > 0 && $action === 'editar') {
+        $nova_descripcio = trim((string)($_POST['descripcio_curta'] ?? ''));
+        $nova_prioritat = strtolower(trim((string)($_POST['prioritat'] ?? '')));
+
+        if ($nova_descripcio === '') {
+            $alert = ['type' => 'warning', 'message' => "La descripció no pot estar buida per la incidència #$id."];
+        } elseif (function_exists('mb_strlen') ? mb_strlen($nova_descripcio) > 255 : strlen($nova_descripcio) > 255) {
+            $alert = ['type' => 'warning', 'message' => "La descripció és massa llarga (màxim 255 caràcters) per la incidència #$id."];
+        } elseif (!in_array($nova_prioritat, $prioritats_valides, true)) {
+            $alert = ['type' => 'warning', 'message' => "Prioritat no vàlida per la incidència #$id."];
+        } else {
+            $placeholders = implode(',', array_fill(0, count($estats_editables), '?'));
+            $sql = "UPDATE incidencies SET descripcio_curta = ?, prioritat = ? WHERE id = ? AND estat IN ($placeholders)";
+            $stmt = $conn->prepare($sql);
+            if ($stmt === false) {
+                $alert = ['type' => 'danger', 'message' => 'Error preparant la consulta: ' . $conn->error];
+            } else {
+                $types = 'ssi' . str_repeat('s', count($estats_editables));
+                $params = array_merge([$nova_descripcio, $nova_prioritat, $id], $estats_editables);
+                $stmt->bind_param($types, ...$params);
+                if ($stmt->execute() && $stmt->affected_rows > 0) {
+                    $alert = ['type' => 'success', 'message' => "Incidència #$id actualitzada (descripció i prioritat)."];
+                } else {
+                    $alert = ['type' => 'warning', 'message' => "No s'ha pogut actualitzar la incidència #$id (potser ja està tancada o rebutjada)."];
+                }
+                $stmt->close();
+            }
+        }
+    }
+
+    if ($id > 0 && $action === 'rebutjar') {
+        $placeholders = implode(',', array_fill(0, count($estats_editables), '?'));
+        $sql = "UPDATE incidencies SET estat = ?, tecnic_assignat = NULL, data_inici_tasca = NULL, data_tancament = NOW() WHERE id = ? AND estat IN ($placeholders)";
+        $stmt = $conn->prepare($sql);
+        if ($stmt === false) {
+            $alert = ['type' => 'danger', 'message' => 'Error preparant la consulta: ' . $conn->error];
+        } else {
+            $estat_rebutjada = INCIDENCIA_ESTAT_REBUTJADA;
+            $types = 'si' . str_repeat('s', count($estats_editables));
+            $params = array_merge([$estat_rebutjada, $id], $estats_editables);
+            $stmt->bind_param($types, ...$params);
+            if ($stmt->execute() && $stmt->affected_rows > 0) {
+                $alert = ['type' => 'success', 'message' => "Incidència #$id rebutjada."];
+            } else {
+                $alert = ['type' => 'warning', 'message' => "No s'ha pogut rebutjar la incidència #$id (potser ja està tancada o rebutjada)."];
+            }
+            $stmt->close();
         }
     }
 
@@ -112,9 +172,25 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         return;
     }
 
+    $prio_labels = [
+        INCIDENCIA_PRIORITAT_ALTA => 'Alta',
+        INCIDENCIA_PRIORITAT_MITJA => 'Mitja',
+        INCIDENCIA_PRIORITAT_BAIXA => 'Baixa',
+    ];
+    $estat_labels = [
+        INCIDENCIA_ESTAT_PENDENT_ASSIGNAR => "Pendent",
+        INCIDENCIA_ESTAT_ASSIGNADA => "Assignada",
+        INCIDENCIA_ESTAT_TANCADA => "Tancada",
+        INCIDENCIA_ESTAT_REBUTJADA => "Rebutjada",
+    ];
+
     echo "<div class='table-responsive scrollable-list'>";
     echo "<table class='table table-sm table-striped align-middle'>";
-    echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Data</th>";
+    echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Prioritat</th>";
+	if ($mode === 'historial') {
+		echo "<th scope='col'>Estat</th>";
+	}
+	echo "<th scope='col'>Data</th>";
     if ($mode !== 'pendent') {
         echo "<th scope='col'>Tècnic</th>";
     }
@@ -126,7 +202,12 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
     foreach ($rows as $row) {
         $id = (int)($row['id'] ?? 0);
         $dep = htmlspecialchars((string)($row['departament'] ?? ''));
-        $desc = htmlspecialchars((string)($row['descripcio_curta'] ?? ''));
+        $desc_raw = (string)($row['descripcio_curta'] ?? '');
+        $desc = htmlspecialchars($desc_raw);
+        $prio_raw = strtolower(trim((string)($row['prioritat'] ?? INCIDENCIA_PRIORITAT_MITJA)));
+        $prio_label = htmlspecialchars($prio_labels[$prio_raw] ?? 'Mitja');
+        $estat_raw = (string)($row['estat'] ?? '');
+        $estat_label = htmlspecialchars($estat_labels[$estat_raw] ?? $estat_raw);
         $data = htmlspecialchars((string)($row['data'] ?? ''));
         $tecnic = htmlspecialchars((string)($row['tecnic_assignat'] ?? ''));
 
@@ -134,6 +215,10 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         echo "<th scope='row'>$id</th>";
         echo "<td>$dep</td>";
         echo "<td>$desc</td>";
+        echo "<td>$prio_label</td>";
+		if ($mode === 'historial') {
+			echo "<td>" . ($estat_label !== '' ? $estat_label : "<span class='text-muted'>—</span>") . "</td>";
+		}
         echo "<td>$data</td>";
 
         if ($mode !== 'pendent') {
@@ -142,12 +227,27 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
 
         if ($mode === 'pendent') {
             echo "<td>";
-            echo "<button type='button' class='btn btn-sm btn-outline-primary' data-bs-toggle='modal' data-bs-target='#assignarModal' data-incidencia-id='" . (int)$id . "'>Assignar</button>";
+            echo "<button type='button' class='btn btn-sm btn-outline-primary me-2' data-bs-toggle='modal' data-bs-target='#assignarModal' data-incidencia-id='" . (int)$id . "'>Assignar</button>";
+            $desc_attr = htmlspecialchars($desc_raw, ENT_QUOTES);
+            $prio_attr = htmlspecialchars($prio_raw, ENT_QUOTES);
+            echo "<button type='button' class='btn btn-sm btn-outline-secondary me-2' data-bs-toggle='modal' data-bs-target='#editarModal' data-incidencia-id='" . (int)$id . "' data-incidencia-desc='" . $desc_attr . "' data-incidencia-prio='" . $prio_attr . "'>Editar</button>";
+            echo "<form method='POST' class='d-inline' onsubmit=\"return confirm('Segur que vols rebutjar la incidència #" . (int)$id . "?');\">";
+            echo "<input type='hidden' name='sort' value='" . htmlspecialchars((string)($filters['sort'] ?? '')) . "'>";
+            echo "<input type='hidden' name='dir' value='" . htmlspecialchars((string)($filters['dir'] ?? '')) . "'>";
+            echo "<input type='hidden' name='q' value='" . htmlspecialchars((string)($filters['q'] ?? '')) . "'>";
+            echo "<input type='hidden' name='data' value='" . htmlspecialchars((string)($filters['data'] ?? '')) . "'>";
+            echo "<input type='hidden' name='action' value='rebutjar'>";
+            echo "<input type='hidden' name='id' value='" . (int)$id . "'>";
+            echo "<button type='submit' class='btn btn-sm btn-outline-danger'>Rebutjar</button>";
+            echo "</form>";
             echo "</td>";
         }
 
         if ($mode === 'assignada') {
             echo "<td>";
+			$desc_attr = htmlspecialchars($desc_raw, ENT_QUOTES);
+			$prio_attr = htmlspecialchars($prio_raw, ENT_QUOTES);
+			echo "<button type='button' class='btn btn-sm btn-outline-secondary me-2' data-bs-toggle='modal' data-bs-target='#editarModal' data-incidencia-id='" . (int)$id . "' data-incidencia-desc='" . $desc_attr . "' data-incidencia-prio='" . $prio_attr . "'>Editar</button>";
             echo "<form method='POST' class='d-inline'>";
             echo "<input type='hidden' name='sort' value='" . htmlspecialchars((string)($filters['sort'] ?? '')) . "'>";
             echo "<input type='hidden' name='dir' value='" . htmlspecialchars((string)($filters['dir'] ?? '')) . "'>";
@@ -156,6 +256,15 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
             echo "<input type='hidden' name='action' value='desassignar'>";
             echo "<input type='hidden' name='id' value='" . (int)$id . "'>";
             echo "<button type='submit' class='btn btn-sm btn-outline-warning'>Desassignar</button>";
+            echo "</form>";
+            echo "<form method='POST' class='d-inline ms-2' onsubmit=\"return confirm('Segur que vols rebutjar la incidència #" . (int)$id . "?');\">";
+            echo "<input type='hidden' name='sort' value='" . htmlspecialchars((string)($filters['sort'] ?? '')) . "'>";
+            echo "<input type='hidden' name='dir' value='" . htmlspecialchars((string)($filters['dir'] ?? '')) . "'>";
+            echo "<input type='hidden' name='q' value='" . htmlspecialchars((string)($filters['q'] ?? '')) . "'>";
+            echo "<input type='hidden' name='data' value='" . htmlspecialchars((string)($filters['data'] ?? '')) . "'>";
+            echo "<input type='hidden' name='action' value='rebutjar'>";
+            echo "<input type='hidden' name='id' value='" . (int)$id . "'>";
+            echo "<button type='submit' class='btn btn-sm btn-outline-danger'>Rebutjar</button>";
             echo "</form>";
             echo "</td>";
         }
@@ -269,6 +378,7 @@ if ($alert === null) {
     $estat_pendent = INCIDENCIA_ESTAT_PENDENT_ASSIGNAR;
     $estat_assignada = INCIDENCIA_ESTAT_ASSIGNADA;
     $estat_tancada = INCIDENCIA_ESTAT_TANCADA;
+	$estat_rebutjada = INCIDENCIA_ESTAT_REBUTJADA;
 
     // Pendents
     list($where_parts, $types, $params) = $build_where(false);
@@ -277,7 +387,7 @@ if ($alert === null) {
         $where_sql .= ' AND ' . implode(' AND ', $where_parts);
     }
     $order_col = $order_map_pending_assigned[$sort] ?? 'data_incidencia';
-    $sql1 = "SELECT id, departament, descripcio_curta, data_incidencia FROM incidencies WHERE $where_sql ORDER BY $order_col $dir";
+    $sql1 = "SELECT id, departament, descripcio_curta, prioritat, data_incidencia FROM incidencies WHERE $where_sql ORDER BY $order_col $dir";
     $stmt1 = $conn->prepare($sql1);
     if ($stmt1 !== false) {
         $bind_types = 's' . $types;
@@ -291,6 +401,7 @@ if ($alert === null) {
                         'id' => $row['id'],
                         'departament' => $row['departament'],
                         'descripcio_curta' => $row['descripcio_curta'],
+						'prioritat' => $row['prioritat'] ?? INCIDENCIA_PRIORITAT_MITJA,
                         'data' => $row['data_incidencia'],
                     ];
                 }
@@ -306,7 +417,7 @@ if ($alert === null) {
         $where_sql2 .= ' AND ' . implode(' AND ', $where_parts2);
     }
     $order_col2 = $order_map_pending_assigned[$sort] ?? 'data_incidencia';
-    $sql2 = "SELECT id, departament, descripcio_curta, data_incidencia, tecnic_assignat FROM incidencies WHERE $where_sql2 ORDER BY $order_col2 $dir";
+    $sql2 = "SELECT id, departament, descripcio_curta, prioritat, data_incidencia, tecnic_assignat FROM incidencies WHERE $where_sql2 ORDER BY $order_col2 $dir";
     $stmt2 = $conn->prepare($sql2);
     if ($stmt2 !== false) {
         $bind_types2 = 's' . $types2;
@@ -320,6 +431,7 @@ if ($alert === null) {
                         'id' => $row['id'],
                         'departament' => $row['departament'],
                         'descripcio_curta' => $row['descripcio_curta'],
+						'prioritat' => $row['prioritat'] ?? INCIDENCIA_PRIORITAT_MITJA,
                         'data' => $row['data_incidencia'],
                         'tecnic_assignat' => $row['tecnic_assignat'],
                     ];
@@ -329,9 +441,9 @@ if ($alert === null) {
         $stmt2->close();
     }
 
-    // Historial
+    // Historial (tancades + rebutjades)
     list($where_parts3, $types3, $params3) = $build_where(true);
-    $where_sql3 = 'estat = ?';
+    $where_sql3 = '(estat = ? OR estat = ?)';
     if (count($where_parts3) > 0) {
         $where_sql3 .= ' AND ' . implode(' AND ', $where_parts3);
     }
@@ -340,8 +452,8 @@ if ($alert === null) {
     $total_history_rows = 0;
     $stmt3_count = $conn->prepare($count_sql3);
     if ($stmt3_count !== false) {
-        $bind_types3_count = 's' . $types3;
-        $bind_values3_count = array_merge([$estat_tancada], $params3);
+        $bind_types3_count = 'ss' . $types3;
+        $bind_values3_count = array_merge([$estat_tancada, $estat_rebutjada], $params3);
         $stmt3_count->bind_param($bind_types3_count, ...$bind_values3_count);
         if ($stmt3_count->execute()) {
             $resCount = $stmt3_count->get_result();
@@ -357,11 +469,11 @@ if ($alert === null) {
     $historial_page = min($historial_page, $total_history_pages);
     $historial_offset = ($historial_page - 1) * $historial_per_page;
 
-    $sql3 = "SELECT id, departament, descripcio_curta, COALESCE(data_tancament, data_incidencia) AS data_hist, tecnic_assignat FROM incidencies WHERE $where_sql3 ORDER BY $order_col3 $dir LIMIT ? OFFSET ?";
+    $sql3 = "SELECT id, departament, descripcio_curta, prioritat, estat, COALESCE(data_tancament, data_incidencia) AS data_hist, tecnic_assignat FROM incidencies WHERE $where_sql3 ORDER BY $order_col3 $dir LIMIT ? OFFSET ?";
     $stmt3 = $conn->prepare($sql3);
     if ($stmt3 !== false) {
-        $bind_types3 = 's' . $types3 . 'ii';
-        $bind_values3 = array_merge([$estat_tancada], $params3, [$historial_per_page, $historial_offset]);
+        $bind_types3 = 'ss' . $types3 . 'ii';
+        $bind_values3 = array_merge([$estat_tancada, $estat_rebutjada], $params3, [$historial_per_page, $historial_offset]);
         $stmt3->bind_param($bind_types3, ...$bind_values3);
         if ($stmt3->execute()) {
             $res = $stmt3->get_result();
@@ -371,6 +483,8 @@ if ($alert === null) {
                         'id' => $row['id'],
                         'departament' => $row['departament'],
                         'descripcio_curta' => $row['descripcio_curta'],
+						'prioritat' => $row['prioritat'] ?? INCIDENCIA_PRIORITAT_MITJA,
+						'estat' => $row['estat'] ?? '',
                         'data' => $row['data_hist'],
                         'tecnic_assignat' => $row['tecnic_assignat'],
                     ];
@@ -457,6 +571,49 @@ if ($alert === null) {
     <a class="btn btn-outline-secondary" href="index.php">Tornar</a>
 </div>
 
+    <!-- Modal: Editar descripció i prioritat -->
+    <div class="modal fade" id="editarModal" tabindex="-1" aria-labelledby="editarModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editarModalLabel">Editar incidència</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tancar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">Editant la incidència <span class="fw-bold">#<span id="editarIncidenciaId">—</span></span>.</p>
+
+                    <form method="POST" id="editarForm">
+                        <input type="hidden" name="sort" value="<?php echo htmlspecialchars((string)$sort); ?>">
+                        <input type="hidden" name="dir" value="<?php echo htmlspecialchars((string)$dir); ?>">
+                        <input type="hidden" name="q" value="<?php echo htmlspecialchars((string)$q); ?>">
+                        <input type="hidden" name="data" value="<?php echo htmlspecialchars((string)$data); ?>">
+                        <input type="hidden" name="action" value="editar">
+                        <input type="hidden" name="id" id="editarId" value="0">
+
+                        <div class="mb-3">
+                            <label for="editarPrioritat" class="form-label">Prioritat</label>
+                            <select class="form-select" id="editarPrioritat" name="prioritat" required>
+                                <option value="baixa">Baixa</option>
+                                <option value="mitja">Mitja</option>
+                                <option value="alta">Alta</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editarDescripcio" class="form-label">Descripció curta</label>
+                            <textarea class="form-control" id="editarDescripcio" name="descripcio_curta" rows="3" maxlength="255" required></textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Desar canvis</button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel·lar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <!-- Modal: Assignar a tècnic -->
 <div class="modal fade" id="assignarModal" tabindex="-1" aria-labelledby="assignarModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -503,6 +660,30 @@ if ($alert === null) {
             var label = document.getElementById('assignarIncidenciaId');
             if (input) input.value = id;
             if (label) label.textContent = id;
+        });
+    })();
+</script>
+
+<script>
+    (function() {
+        var modal = document.getElementById('editarModal');
+        if (!modal) return;
+
+        modal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget;
+            if (!button) return;
+            var id = button.getAttribute('data-incidencia-id') || '0';
+            var desc = button.getAttribute('data-incidencia-desc') || '';
+            var prio = (button.getAttribute('data-incidencia-prio') || 'mitja').toLowerCase();
+
+            var input = document.getElementById('editarId');
+            var label = document.getElementById('editarIncidenciaId');
+            var textarea = document.getElementById('editarDescripcio');
+            var select = document.getElementById('editarPrioritat');
+            if (input) input.value = id;
+            if (label) label.textContent = id;
+            if (textarea) textarea.value = desc;
+            if (select) select.value = (['baixa','mitja','alta'].includes(prio) ? prio : 'mitja');
         });
     })();
 </script>
