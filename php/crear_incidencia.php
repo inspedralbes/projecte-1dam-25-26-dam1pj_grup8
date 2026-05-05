@@ -37,11 +37,21 @@ function crear_incidencia(mysqli $conn): array
 
 	$departament = trim((string)($_POST['departament'] ?? ''));
 	$descripcio_curta = trim((string)($_POST['descripcio_curta'] ?? ''));
+	$planta = (int) ($_POST['planta'] ?? 0);
+	$aula = (int) ($_POST['aula'] ?? 0);
+	$localitzacio = 'P' . $planta . '_A' . $aula;
 
 	if ($departament === '' || $descripcio_curta === '') {
 		return [
 			'type' => 'error',
 			'message_html' => 'Omple tots els camps obligatoris.',
+		];
+	}
+
+	if ($planta < 1 || $planta > 3 || $aula < 1 || $aula > 10) {
+		return [
+			'type' => 'error',
+			'message_html' => 'Localització no vàlida (planta 1-3 i aula 1-10).',
 		];
 	}
 
@@ -66,7 +76,7 @@ function crear_incidencia(mysqli $conn): array
 			'message_html' => 'La descripció és massa llarga (màxim 255 caràcters).',
 		];
 	}
-	$sql = "INSERT INTO incidencies (departament, descripcio_curta) VALUES (?, ?)";
+	$sql = "INSERT INTO incidencies (departament, descripcio_curta, localitzacio) VALUES (?, ?, ?)";
 	$stmt = $conn->prepare($sql);
 	if ($stmt === false) {
 		return [
@@ -75,7 +85,7 @@ function crear_incidencia(mysqli $conn): array
 		];
 	}
 
-	$stmt->bind_param('ss', $departament, $descripcio_curta);
+	$stmt->bind_param('sss', $departament, $descripcio_curta, $localitzacio);
 	if ($stmt->execute()) {
 		$nou_id = (int) $conn->insert_id;
 		$data_guardada = '';
@@ -133,6 +143,12 @@ function crear_incidencia(mysqli $conn): array
 	$formulari_descripcio = (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'success')
 		? ''
 		: (string) ($_POST['descripcio_curta'] ?? '');
+	$formulari_planta = (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'success')
+		? ''
+		: (string) ($_POST['planta'] ?? '');
+	$formulari_aula = (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'success')
+		? ''
+		: (string) ($_POST['aula'] ?? '');
 
 	if (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'error') {
 		echo "<div class='alert alert-danger' role='alert'>" . ($resultat_creacio['message_html'] ?? '') . "</div>";
@@ -158,6 +174,31 @@ function crear_incidencia(mysqli $conn): array
 				<?php echo htmlspecialchars(date('Y-m-d H:i')); ?>
 			</div>
 			<div class="form-text">No cal especificar-la: el sistema la guarda automàticament.</div>
+		</div>
+
+		<div class="mb-3">
+			<label class="form-label">Localització</label>
+			<div class="row g-2">
+				<div class="col-12 col-sm-6">
+					<label for="planta" class="form-label">Planta</label>
+					<select class="form-select" id="planta" name="planta" required>
+						<option value="" <?php echo $formulari_planta === '' ? 'selected' : ''; ?> disabled>-- Selecciona --</option>
+						<?php for ($p = 1; $p <= 3; $p++) : $val = (string) $p; ?>
+							<option value="<?php echo $val; ?>" <?php echo $formulari_planta === $val ? 'selected' : ''; ?>>P<?php echo $val; ?></option>
+						<?php endfor; ?>
+					</select>
+				</div>
+				<div class="col-12 col-sm-6">
+					<label for="aula" class="form-label">Aula</label>
+					<select class="form-select" id="aula" name="aula" required>
+						<option value="" <?php echo $formulari_aula === '' ? 'selected' : ''; ?> disabled>-- Selecciona --</option>
+						<?php for ($a = 1; $a <= 10; $a++) : $val = (string) $a; ?>
+							<option value="<?php echo $val; ?>" <?php echo $formulari_aula === $val ? 'selected' : ''; ?>>A<?php echo $val; ?></option>
+						<?php endfor; ?>
+					</select>
+				</div>
+			</div>
+			<div class="form-text">Es guarda com P{planta}_A{aula} (ex.: P1_A1).</div>
 		</div>
 
 		<div class="mb-3">

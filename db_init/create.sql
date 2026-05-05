@@ -42,6 +42,11 @@ CREATE TABLE IF NOT EXISTS incidencies (
   departament VARCHAR(80) NOT NULL,
   data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   descripcio_curta VARCHAR(255) NOT NULL,
+  localitzacio ENUM(
+    'P1_A1','P1_A2','P1_A3','P1_A4','P1_A5','P1_A6','P1_A7','P1_A8','P1_A9','P1_A10',
+    'P2_A1','P2_A2','P2_A3','P2_A4','P2_A5','P2_A6','P2_A7','P2_A8','P2_A9','P2_A10',
+    'P3_A1','P3_A2','P3_A3','P3_A4','P3_A5','P3_A6','P3_A7','P3_A8','P3_A9','P3_A10'
+  ) NULL,
   prioritat VARCHAR(10) NOT NULL DEFAULT 'mitja',
   estat VARCHAR(30) NOT NULL DEFAULT 'pendent_assignar',
   tecnic_assignat VARCHAR(80) NULL,

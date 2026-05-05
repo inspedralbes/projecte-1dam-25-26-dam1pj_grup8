@@ -67,11 +67,20 @@ if (!defined('INCIDENCIA_TECNIC_PER_DEFECTE')) {
 
 function ensure_incidencies_schema(mysqli $conn): array
 {
+	$localitzacions = [];
+	for ($planta = 1; $planta <= 3; $planta++) {
+		for ($aula = 1; $aula <= 10; $aula++) {
+			$localitzacions[] = 'P' . $planta . '_A' . $aula;
+		}
+	}
+	$localitzacions_sql = "'" . implode("','", $localitzacions) . "'";
+
 	if (!taula_existeix($conn, 'incidencies')) {
 		$create_sql = "CREATE TABLE IF NOT EXISTS incidencies (
 			id INT AUTO_INCREMENT PRIMARY KEY,
 			departament VARCHAR(80) NOT NULL,
 			descripcio_curta VARCHAR(255) NOT NULL,
+			localitzacio ENUM($localitzacions_sql) NULL,
 			prioritat VARCHAR(10) NOT NULL DEFAULT '" . INCIDENCIA_PRIORITAT_MITJA . "',
 			data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			estat VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_ESTAT_PENDENT_ASSIGNAR . "',
@@ -92,6 +101,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 	$required_columns = [
 		'departament' => "ALTER TABLE incidencies ADD COLUMN departament VARCHAR(80) NOT NULL",
 		'descripcio_curta' => "ALTER TABLE incidencies ADD COLUMN descripcio_curta VARCHAR(255) NOT NULL",
+		'localitzacio' => "ALTER TABLE incidencies ADD COLUMN localitzacio ENUM($localitzacions_sql) NULL AFTER descripcio_curta",
 		'prioritat' => "ALTER TABLE incidencies ADD COLUMN prioritat VARCHAR(10) NOT NULL DEFAULT '" . INCIDENCIA_PRIORITAT_MITJA . "'",
 		'data_incidencia' => "ALTER TABLE incidencies ADD COLUMN data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
 		'estat' => "ALTER TABLE incidencies ADD COLUMN estat VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_ESTAT_PENDENT_ASSIGNAR . "'",
