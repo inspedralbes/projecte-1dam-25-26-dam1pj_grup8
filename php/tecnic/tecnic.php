@@ -6,21 +6,24 @@ require_once __DIR__ . '/../incidencies/tecnic_schema.php';
 
 $schema_result = ensure_incidencies_schema($conn);
 $alert = null;
+$schema_ok = true;
 
 if (!is_array($schema_result) || ($schema_result['ok'] ?? false) !== true) {
     $alert = [
         'type' => 'danger',
         'message' => "No s'ha pogut inicialitzar l'esquema d'incidències: " . (string)($schema_result['error'] ?? 'Error desconegut'),
     ];
+	$schema_ok = false;
 }
 
-if ($alert === null) {
+if ($schema_ok) {
     $tecnic_schema_result = ensure_tecnic_schema($conn);
     if (!is_array($tecnic_schema_result) || ($tecnic_schema_result['ok'] ?? false) !== true) {
         $alert = [
             'type' => 'danger',
             'message' => "No s'ha pogut inicialitzar l'esquema de tècnics: " . (string)($tecnic_schema_result['error'] ?? 'Error desconegut'),
         ];
+		$schema_ok = false;
     }
 }
 
@@ -44,7 +47,7 @@ if ($data !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
 }
 
 // Flash alert support after PRG redirect.
-if ($alert === null) {
+if ($schema_ok && $alert === null) {
     $flash_type = (string)($_GET['flash_type'] ?? '');
     $flash_msg = trim((string)($_GET['flash_msg'] ?? ''));
     $valid_flash_types = ['success', 'warning', 'danger', 'info'];
@@ -60,7 +63,7 @@ if ($alert === null) {
 }
 
 $tecnics_disponibles = [];
-if ($alert === null) {
+if ($schema_ok) {
     $tecnics_query = $conn->query("SELECT FIRST_NAME, LAST_NAME FROM TECNIC ORDER BY FIRST_NAME, LAST_NAME");
     if ($tecnics_query !== false) {
         while ($row = $tecnics_query->fetch_assoc()) {
@@ -83,7 +86,7 @@ if (!in_array($tecnic_actual, $tecnics_disponibles, true)) {
     $tecnic_actual = $tecnics_disponibles[0] ?? INCIDENCIA_TECNIC_PER_DEFECTE;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $schema_ok) {
     $action = (string)($_POST['action'] ?? '');
     $id = (int)($_POST['id'] ?? 0);
 
@@ -298,7 +301,7 @@ $assigned_rows = [];
 $history_rows = [];
 $tecnic_info = null;
 
-if ($alert === null) {
+if ($schema_ok) {
     $name_parts = preg_split('/\s+/', trim($tecnic_actual), 2);
     $first_name = trim((string)($name_parts[0] ?? ''));
     $last_name = trim((string)($name_parts[1] ?? ''));
