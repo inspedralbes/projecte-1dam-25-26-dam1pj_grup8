@@ -13,6 +13,18 @@ function longitud(string $text): int
 	return strlen($text);
 }
 
+function departaments_disponibles(): array
+{
+	return [
+		'IT',
+		'Administració',
+		'Manteniment',
+		'Consergeria',
+		'ESO',
+		'Batxillerat',
+	];
+}
+
 function crear_incidencia(mysqli $conn): array
 {
 	$schema_result = ensure_incidencies_schema($conn);
@@ -37,6 +49,14 @@ function crear_incidencia(mysqli $conn): array
 		return [
 			'type' => 'error',
 			'message_html' => 'El departament és massa llarg (màxim 80 caràcters).',
+		];
+	}
+
+	$departaments_valids = departaments_disponibles();
+	if (!in_array($departament, $departaments_valids, true)) {
+		return [
+			'type' => 'error',
+			'message_html' => 'Departament no vàlid.',
 		];
 	}
 
@@ -99,7 +119,7 @@ function crear_incidencia(mysqli $conn): array
 
 <div class="container py-4" style="max-width: 760px;">
 	<h1 class="h3 mb-3">Registrar nova incidència</h1>
-	<p class="text-muted mb-4">Introdueix el departament i una descripció curta. La data s'assigna automàticament.</p>
+	<p class="text-muted mb-4">Selecciona el departament i escriu una descripció curta. La data s'assigna automàticament.</p>
 
 	<?php
 	$resultat_creacio = null;
@@ -122,15 +142,14 @@ function crear_incidencia(mysqli $conn): array
 	<form method="POST" action="crear_incidencia.php" class="card card-body">
 		<div class="mb-3">
 			<label for="departament" class="form-label">Departament</label>
-			<input
-				type="text"
-				class="form-control"
-				id="departament"
-				name="departament"
-				required
-				maxlength="80"
-				value="<?php echo htmlspecialchars($formulari_departament); ?>"
-			>
+			<select class="form-select" id="departament" name="departament" required>
+				<option value="" <?php echo $formulari_departament === '' ? 'selected' : ''; ?> disabled>-- Selecciona --</option>
+				<?php foreach (departaments_disponibles() as $dept) : ?>
+					<option value="<?php echo htmlspecialchars($dept); ?>" <?php echo $formulari_departament === $dept ? 'selected' : ''; ?>>
+						<?php echo htmlspecialchars($dept); ?>
+					</option>
+				<?php endforeach; ?>
+			</select>
 		</div>
 
 		<div class="mb-3">
