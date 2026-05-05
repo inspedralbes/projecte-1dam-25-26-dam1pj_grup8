@@ -1,8 +1,8 @@
 <?php
 
-require_once 'connexio.php';
+require_once __DIR__ . '/../incidencies/connexio.php';
 
-require_once 'incidencies_schema.php';
+require_once __DIR__ . '/../incidencies/incidencies_schema.php';
 
 function longitud(string $text): int
 {
@@ -125,7 +125,7 @@ function crear_incidencia(mysqli $conn): array
 
 ?>
 
-<?php include 'header.php'; ?>
+<?php include __DIR__ . '/../incidencies/header.php'; ?>
 
 <div class="container py-4" style="max-width: 760px;">
 	<h1 class="h3 mb-3">Registrar nova incidència</h1>
@@ -241,5 +241,5 @@ function crear_incidencia(mysqli $conn): array
 	<?php endif; ?>
 </div>
 
-<?php include 'footer.php'; ?>
+<?php include __DIR__ . '/../incidencies/footer.php'; ?>
 

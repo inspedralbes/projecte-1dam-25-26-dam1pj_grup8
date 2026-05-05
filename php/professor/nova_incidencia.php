@@ -1,3 +1,3 @@
 <?php
 // Alias perquè l'enllaç de professor.php funcioni.
-require_once 'crear_incidencia.php';
+require_once __DIR__ . '/crear_incidencia.php';

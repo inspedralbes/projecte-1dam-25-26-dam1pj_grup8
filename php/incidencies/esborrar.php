@@ -85,7 +85,7 @@ require_once 'connexio.php';
 
     <div id="menu">
         <hr>
-        <p><a href="index.php">Portada</a> </p>
+        <p><a href="/index.php">Portada</a> </p>
         <p><a href="llistar.php">Llistar</a></p>
         <p><a href="crear.php">Crear</a></p>
     </div>

@@ -6,11 +6,16 @@
 // require_once  'connexio.php';
 
 
-// Configuració de la connexió a la base de dades
-$servername = "localhost"; // Nom del servei definit al docker-compose.yaml
-$username = "a25asipozdor_usuari_inc"; // Usuari definit al docker-compose.yaml
-$password = "P@ssw0rd"; // Contrasenya definida al docker-compose.yaml
-$dbname = "a25asipozdor_incidencies"; // Nom de la base de dades
+// Configuració de la connexió a la base de dades.
+// - Dins Docker Compose: el host és el servei `db` i la BBDD és `persones`.
+// - Fora de Docker: manté els valors actuals.
+
+$isDocker = file_exists('/.dockerenv');
+
+$servername = 'db';
+$username = 'usuari' ;
+$password = 'paraula_de_pas' ;
+$dbname = 'persones';
 
 // Quan ja tingueu un codi una mica depurat, i vulgueu fer la gestió dels errors
 // vosaltres mateixos heu de desactivar el comportament predeterminat de mysqli 

@@ -1,6 +1,6 @@
-<?php include 'header.php'; ?>
+<?php include __DIR__ . '/../incidencies/header.php'; ?>
 
-<link rel="stylesheet" href="css/professor.css">
+<link rel="stylesheet" href="/css/professor.css">
 
 <div class="professor-hero">
 
@@ -10,7 +10,7 @@
 
         <div class="d-grid gap-3">
 
-            <a href="comprovar_incidencia.php" class="btn btn-prof">
+            <a href="/incidencies/llistar.php" class="btn btn-prof">
                 Comprovar incidència
             </a>
 
@@ -24,6 +24,6 @@
 
 </div>
 
-<script src="js/professor.js"></script>
+<script src="/js/professor.js"></script>
 
-<?php include 'footer.php'; ?>
+<?php include __DIR__ . '/../incidencies/footer.php'; ?>

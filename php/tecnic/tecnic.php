@@ -1,8 +1,8 @@
 <?php
 
-require_once 'connexio.php';
-require_once 'incidencies_schema.php';
-require_once 'tecnic_schema.php';
+require_once __DIR__ . '/../incidencies/connexio.php';
+require_once __DIR__ . '/../incidencies/incidencies_schema.php';
+require_once __DIR__ . '/../incidencies/tecnic_schema.php';
 
 $schema_result = ensure_incidencies_schema($conn);
 $alert = null;
@@ -451,9 +451,9 @@ if ($alert === null) {
 
 ?>
 
-<?php include 'header.php'; ?>
+<?php include __DIR__ . '/../incidencies/header.php'; ?>
 
-<link rel="stylesheet" href="css/tecnic.css">
+<link rel="stylesheet" href="/css/tecnic.css">
 
 <div class="container py-4">
     <h1 class="h3 mb-2">Tècnic</h1>
@@ -548,7 +548,8 @@ if ($alert === null) {
         <?php endif; ?>
     </div>
 
-    <a class="btn btn-outline-secondary" href="index.php">Tornar</a>
+    <a class="btn btn-outline-secondary" href="/index.php">Tornar</a>
+</div>
 </div>
 
-<?php include 'footer.php'; ?>
+<?php include __DIR__ . '/../incidencies/footer.php'; ?>

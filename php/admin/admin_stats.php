@@ -1,8 +1,8 @@
 <?php
 
-require_once 'connexio.php';
-require_once 'access_logs_schema.php';
-require_once 'incidencies_schema.php';
+require_once __DIR__ . '/../incidencies/connexio.php';
+require_once __DIR__ . '/../incidencies/access_logs_schema.php';
+require_once __DIR__ . '/../incidencies/incidencies_schema.php';
 
 header('Content-Type: application/json; charset=utf-8');
 

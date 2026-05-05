@@ -4,11 +4,11 @@
 $showCrearUsuariButton = true;
 $showUsuarisButton = true;
 
-include 'header.php';
-require_once 'connexio.php';
-require_once 'access_logs_schema.php';
-require_once 'usuari_schema.php';
-require_once 'tecnic_schema.php';
+include __DIR__ . '/../incidencies/header.php';
+require_once __DIR__ . '/../incidencies/connexio.php';
+require_once __DIR__ . '/../incidencies/access_logs_schema.php';
+require_once __DIR__ . '/../incidencies/usuari_schema.php';
+require_once __DIR__ . '/../incidencies/tecnic_schema.php';
 
 ensure_access_logs_schema($conn);
 
@@ -300,7 +300,7 @@ if ($schema_ok) {
 }
 ?>
 
-<link rel="stylesheet" href="css/admin.css">
+<link rel="stylesheet" href="/css/admin.css">
 
 <div class="container py-5">
 
@@ -754,6 +754,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="js/admin.js"></script>
+<script src="/js/admin.js"></script>
 
-<?php include 'footer.php'; ?>
+<?php include __DIR__ . '/../incidencies/footer.php'; ?>

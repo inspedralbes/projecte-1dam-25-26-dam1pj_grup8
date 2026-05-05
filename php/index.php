@@ -1,5 +1,5 @@
 <?php $bodyClass = 'home-page'; ?>
-<?php include 'header.php'; ?>
+<?php include __DIR__ . '/incidencies/header.php'; ?>
 
 <?php $bgImage = "img/header.webp"; ?>
 
@@ -19,19 +19,19 @@
         <div id="roles" class="d-none mt-4">
             <div class="d-flex flex-column flex-md-row justify-content-center gap-3">
 
-                <a href="professor.php" class="btn btn-custom btn-lg px-4">
+                <a href="professor/professor.php" class="btn btn-custom btn-lg px-4">
                     Professor
                 </a>
 
-                <a href="tecnic.php" class="btn btn-custom btn-lg px-4">
+                <a href="tecnic/tecnic.php" class="btn btn-custom btn-lg px-4">
                     Tècnic
                 </a>
 
-                <a href="responsable_tecnic.php" class="btn btn-custom btn-lg px-4">
+                <a href="responsable/responsable_tecnic.php" class="btn btn-custom btn-lg px-4">
                     Responsable Tècnic
                 </a>
 
-                <a href="admin.php" class="btn btn-custom btn-lg px-4">
+                <a href="admin/admin.php" class="btn btn-custom btn-lg px-4">
                     Admin
                 </a>
 
@@ -41,4 +41,4 @@
     </div>
 </header>
 
-<?php include 'footer.php'; ?>
+<?php include __DIR__ . '/incidencies/footer.php'; ?>

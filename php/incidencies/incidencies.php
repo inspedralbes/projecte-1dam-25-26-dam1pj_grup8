@@ -1,6 +1,6 @@
 <?php include 'header.php'; ?>
 
-<?php $bgImage = "img/header.jpg"; ?>
+<?php $bgImage = "/img/header.jpg"; ?>
 
 <header class="hero-header" style="background-image: url('<?php echo $bgImage; ?>');">
     <div class="hero-overlay"></div>
@@ -35,7 +35,7 @@
 
     <div id="menu" class="mt-4">
         <hr>
-        <p><a href="index.php">Portada</a></p>
+        <p><a href="/index.php">Portada</a></p>
         <p><a href="llistar.php">Llistar</a></p>
         <p><a href="crear.php">Crear</a></p>
     </div>
