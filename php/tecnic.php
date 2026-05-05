@@ -43,6 +43,22 @@ if ($data !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
     $data = '';
 }
 
+// Flash alert support after PRG redirect.
+if ($alert === null) {
+    $flash_type = (string)($_GET['flash_type'] ?? '');
+    $flash_msg = trim((string)($_GET['flash_msg'] ?? ''));
+    $valid_flash_types = ['success', 'warning', 'danger', 'info'];
+    if ($flash_msg !== '' && in_array($flash_type, $valid_flash_types, true)) {
+        $flash_msg_short = function_exists('mb_substr')
+            ? (string) mb_substr($flash_msg, 0, 400)
+            : (string) substr($flash_msg, 0, 400);
+        $alert = [
+            'type' => $flash_type,
+            'message' => $flash_msg_short,
+        ];
+    }
+}
+
 $tecnics_disponibles = [];
 if ($alert === null) {
     $tecnics_query = $conn->query("SELECT FIRST_NAME, LAST_NAME FROM TECNIC ORDER BY FIRST_NAME, LAST_NAME");
@@ -102,6 +118,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
             }
             $stmt->close();
         }
+    }
+
+    // PRG: redirect to GET so the page refreshes and avoids resubmission.
+    if ($action !== '' && $id > 0 && is_array($alert)) {
+        $redirect_params = [
+            'sort' => $sort,
+            'dir' => $dir,
+            'q' => $q,
+            'data' => $data,
+            'tecnic' => $tecnic_actual,
+            'historial_page' => $historial_page,
+            'flash_type' => (string)($alert['type'] ?? 'info'),
+            'flash_msg' => (string)($alert['message'] ?? ''),
+        ];
+        header('Location: tecnic.php?' . http_build_query($redirect_params));
+        exit;
     }
 }
 

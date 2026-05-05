@@ -32,7 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $stmt->bind_param('ssi', $departament, $descripcio_curta, $id);
             if ($stmt->execute()) {
-                $success = true;
+                header('Location: editar_incidencia.php?' . http_build_query(['id' => $id, 'saved' => 1]));
+                exit;
             } else {
                 $errors[] = 'Error actualitzant la incidència: ' . htmlspecialchars($stmt->error);
             }
@@ -40,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$success = (isset($_GET['saved']) && (string)$_GET['saved'] === '1');
 
 $row = null;
 $stmt = $conn->prepare('SELECT id, departament, descripcio_curta, data_incidencia FROM incidencies WHERE id = ?');
