@@ -48,6 +48,7 @@ $sort = (string)($_POST['sort'] ?? $_GET['sort'] ?? 'data');
 $dir = strtolower((string)($_POST['dir'] ?? $_GET['dir'] ?? 'desc'));
 $q = trim((string)($_POST['q'] ?? $_GET['q'] ?? ''));
 $data = trim((string)($_POST['data'] ?? $_GET['data'] ?? ''));
+$prioritat_filter = strtolower(trim((string)($_POST['prioritat_filter'] ?? $_GET['prioritat_filter'] ?? '')));
 $historial_page = max(1, (int)($_POST['historial_page'] ?? $_GET['historial_page'] ?? 1));
 $historial_per_page = 10;
 
@@ -57,6 +58,15 @@ if (!in_array($sort, $sort_valids, true)) {
 }
 if (!in_array($dir, ['asc', 'desc'], true)) {
     $dir = 'desc';
+}
+
+$prioritats_valides = [
+    INCIDENCIA_PRIORITAT_BAIXA,
+    INCIDENCIA_PRIORITAT_MITJA,
+    INCIDENCIA_PRIORITAT_ALTA,
+];
+if ($prioritat_filter !== '' && !in_array($prioritat_filter, $prioritats_valides, true)) {
+    $prioritat_filter = '';
 }
 // Accept YYYY-MM-DD only; otherwise ignore.
 if ($data !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
@@ -83,11 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $schema_ok) {
     $action = (string)($_POST['action'] ?? '');
     $id = (int)($_POST['id'] ?? 0);
 
-    $prioritats_valides = [
-        INCIDENCIA_PRIORITAT_BAIXA,
-        INCIDENCIA_PRIORITAT_MITJA,
-        INCIDENCIA_PRIORITAT_ALTA,
-    ];
     $estats_editables = [
         INCIDENCIA_ESTAT_PENDENT_ASSIGNAR,
         INCIDENCIA_ESTAT_ASSIGNADA,
@@ -116,27 +121,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $schema_ok) {
     }
 
     if ($id > 0 && $action === 'editar') {
-        $nova_descripcio = trim((string)($_POST['descripcio_curta'] ?? ''));
         $nova_prioritat = strtolower(trim((string)($_POST['prioritat'] ?? '')));
 
-        if ($nova_descripcio === '') {
-            $alert = ['type' => 'warning', 'message' => "La descripció no pot estar buida per la incidència #$id."];
-        } elseif (function_exists('mb_strlen') ? mb_strlen($nova_descripcio) > 255 : strlen($nova_descripcio) > 255) {
-            $alert = ['type' => 'warning', 'message' => "La descripció és massa llarga (màxim 255 caràcters) per la incidència #$id."];
-        } elseif (!in_array($nova_prioritat, $prioritats_valides, true)) {
+        if (!in_array($nova_prioritat, $prioritats_valides, true)) {
             $alert = ['type' => 'warning', 'message' => "Prioritat no vàlida per la incidència #$id."];
         } else {
             $placeholders = implode(',', array_fill(0, count($estats_editables), '?'));
-            $sql = "UPDATE incidencies SET descripcio_curta = ?, prioritat = ? WHERE id = ? AND estat IN ($placeholders)";
+            $sql = "UPDATE incidencies SET prioritat = ? WHERE id = ? AND estat IN ($placeholders)";
             $stmt = $conn->prepare($sql);
             if ($stmt === false) {
                 $alert = ['type' => 'danger', 'message' => 'Error preparant la consulta: ' . $conn->error];
             } else {
-                $types = 'ssi' . str_repeat('s', count($estats_editables));
-                $params = array_merge([$nova_descripcio, $nova_prioritat, $id], $estats_editables);
+                $types = 'si' . str_repeat('s', count($estats_editables));
+                $params = array_merge([$nova_prioritat, $id], $estats_editables);
                 $stmt->bind_param($types, ...$params);
                 if ($stmt->execute() && $stmt->affected_rows > 0) {
-                    $alert = ['type' => 'success', 'message' => "Incidència #$id actualitzada (descripció i prioritat)."];
+                    $alert = ['type' => 'success', 'message' => "Incidència #$id actualitzada (prioritat)."];
                 } else {
                     $alert = ['type' => 'warning', 'message' => "No s'ha pogut actualitzar la incidència #$id (potser ja està tancada o rebutjada)."];
                 }
@@ -189,6 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $schema_ok) {
 			'dir' => $dir,
 			'q' => $q,
 			'data' => $data,
+            'prioritat_filter' => $prioritat_filter,
 			'historial_page' => $historial_page,
 			'flash_type' => (string)($alert['type'] ?? 'info'),
 			'flash_msg' => (string)($alert['message'] ?? ''),
@@ -262,14 +263,14 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         if ($mode === 'pendent') {
             echo "<td>";
             echo "<button type='button' class='btn btn-sm btn-outline-primary me-2' data-bs-toggle='modal' data-bs-target='#assignarModal' data-incidencia-id='" . (int)$id . "'>Assignar</button>";
-            $desc_attr = htmlspecialchars($desc_raw, ENT_QUOTES);
             $prio_attr = htmlspecialchars($prio_raw, ENT_QUOTES);
-            echo "<button type='button' class='btn btn-sm btn-outline-secondary me-2' data-bs-toggle='modal' data-bs-target='#editarModal' data-incidencia-id='" . (int)$id . "' data-incidencia-desc='" . $desc_attr . "' data-incidencia-prio='" . $prio_attr . "'>Editar</button>";
+            echo "<button type='button' class='btn btn-sm btn-outline-secondary me-2' data-bs-toggle='modal' data-bs-target='#editarModal' data-incidencia-id='" . (int)$id . "' data-incidencia-prio='" . $prio_attr . "'>Editar</button>";
             echo "<form method='POST' class='d-inline' onsubmit=\"return confirm('Segur que vols rebutjar la incidència #" . (int)$id . "?');\">";
             echo "<input type='hidden' name='sort' value='" . htmlspecialchars((string)($filters['sort'] ?? '')) . "'>";
             echo "<input type='hidden' name='dir' value='" . htmlspecialchars((string)($filters['dir'] ?? '')) . "'>";
             echo "<input type='hidden' name='q' value='" . htmlspecialchars((string)($filters['q'] ?? '')) . "'>";
             echo "<input type='hidden' name='data' value='" . htmlspecialchars((string)($filters['data'] ?? '')) . "'>";
+            echo "<input type='hidden' name='prioritat_filter' value='" . htmlspecialchars((string)($filters['prioritat_filter'] ?? '')) . "'>";
             echo "<input type='hidden' name='action' value='rebutjar'>";
             echo "<input type='hidden' name='id' value='" . (int)$id . "'>";
             echo "<button type='submit' class='btn btn-sm btn-outline-danger'>Rebutjar</button>";
@@ -279,14 +280,14 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
 
         if ($mode === 'assignada') {
             echo "<td>";
-			$desc_attr = htmlspecialchars($desc_raw, ENT_QUOTES);
 			$prio_attr = htmlspecialchars($prio_raw, ENT_QUOTES);
-			echo "<button type='button' class='btn btn-sm btn-outline-secondary me-2' data-bs-toggle='modal' data-bs-target='#editarModal' data-incidencia-id='" . (int)$id . "' data-incidencia-desc='" . $desc_attr . "' data-incidencia-prio='" . $prio_attr . "'>Editar</button>";
+            echo "<button type='button' class='btn btn-sm btn-outline-secondary me-2' data-bs-toggle='modal' data-bs-target='#editarModal' data-incidencia-id='" . (int)$id . "' data-incidencia-prio='" . $prio_attr . "'>Editar</button>";
             echo "<form method='POST' class='d-inline'>";
             echo "<input type='hidden' name='sort' value='" . htmlspecialchars((string)($filters['sort'] ?? '')) . "'>";
             echo "<input type='hidden' name='dir' value='" . htmlspecialchars((string)($filters['dir'] ?? '')) . "'>";
             echo "<input type='hidden' name='q' value='" . htmlspecialchars((string)($filters['q'] ?? '')) . "'>";
             echo "<input type='hidden' name='data' value='" . htmlspecialchars((string)($filters['data'] ?? '')) . "'>";
+            echo "<input type='hidden' name='prioritat_filter' value='" . htmlspecialchars((string)($filters['prioritat_filter'] ?? '')) . "'>";
             echo "<input type='hidden' name='action' value='desassignar'>";
             echo "<input type='hidden' name='id' value='" . (int)$id . "'>";
             echo "<button type='submit' class='btn btn-sm btn-outline-warning'>Desassignar</button>";
@@ -296,6 +297,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
             echo "<input type='hidden' name='dir' value='" . htmlspecialchars((string)($filters['dir'] ?? '')) . "'>";
             echo "<input type='hidden' name='q' value='" . htmlspecialchars((string)($filters['q'] ?? '')) . "'>";
             echo "<input type='hidden' name='data' value='" . htmlspecialchars((string)($filters['data'] ?? '')) . "'>";
+            echo "<input type='hidden' name='prioritat_filter' value='" . htmlspecialchars((string)($filters['prioritat_filter'] ?? '')) . "'>";
             echo "<input type='hidden' name='action' value='rebutjar'>";
             echo "<input type='hidden' name='id' value='" . (int)$id . "'>";
             echo "<button type='submit' class='btn btn-sm btn-outline-danger'>Rebutjar</button>";
@@ -320,6 +322,7 @@ function render_historial_pagination(int $current_page, int $total_pages, array 
         'dir' => (string)($filters['dir'] ?? 'desc'),
         'q' => (string)($filters['q'] ?? ''),
         'data' => (string)($filters['data'] ?? ''),
+        'prioritat_filter' => (string)($filters['prioritat_filter'] ?? ''),
     ];
 
     echo "<nav aria-label='Paginació historial' class='mt-3'>";
@@ -370,6 +373,7 @@ if ($schema_ok) {
         'dir' => $dir,
         'q' => $q,
         'data' => $data,
+        'prioritat_filter' => $prioritat_filter,
     ];
 
     $order_map_pending_assigned = [
@@ -383,7 +387,7 @@ if ($schema_ok) {
         'data' => 'data_hist',
     ];
 
-    $build_where = function (bool $is_history) use ($q, $data): array {
+    $build_where = function (bool $is_history) use ($q, $data, $prioritat_filter): array {
         $where = [];
         $types = '';
         $params = [];
@@ -404,6 +408,12 @@ if ($schema_ok) {
             }
             $types .= 's';
             $params[] = $data;
+        }
+
+        if ($prioritat_filter !== '') {
+            $where[] = 'prioritat = ?';
+            $types .= 's';
+            $params[] = $prioritat_filter;
         }
 
         return [$where, $types, $params];
@@ -568,6 +578,16 @@ if ($schema_ok) {
                 <input id="data" name="data" type="date" class="form-control" value="<?php echo htmlspecialchars($data); ?>">
             </div>
 
+            <div class="col-12 col-md-3">
+                <label for="prioritat_filter" class="form-label mb-1">Prioritat</label>
+                <select id="prioritat_filter" name="prioritat_filter" class="form-select">
+                    <option value="" <?php echo $prioritat_filter === '' ? 'selected' : ''; ?>>Totes</option>
+                    <option value="alta" <?php echo $prioritat_filter === 'alta' ? 'selected' : ''; ?>>Alta</option>
+                    <option value="mitja" <?php echo $prioritat_filter === 'mitja' ? 'selected' : ''; ?>>Mitja</option>
+                    <option value="baixa" <?php echo $prioritat_filter === 'baixa' ? 'selected' : ''; ?>>Baixa</option>
+                </select>
+            </div>
+
             <div class="col-12">
                 <button type="submit" class="btn btn-outline-primary">Aplicar</button>
                 <a class="btn btn-outline-secondary ms-2" href="responsable_tecnic.php">Netejar</a>
@@ -584,19 +604,19 @@ if ($schema_ok) {
 
     <div class="card card-body mb-4">
         <h2 class="h5 mb-3">Pendents d'assignar</h2>
-        <?php render_table_responsable($pending_rows, 'pendent', $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data]); ?>
+        <?php render_table_responsable($pending_rows, 'pendent', $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data, 'prioritat_filter' => $prioritat_filter]); ?>
         <div class="form-text">En assignar, podràs escollir el tècnic i es marcarà com a <strong>assignada</strong>.</div>
     </div>
 
     <div class="card card-body mb-4">
         <h2 class="h5 mb-3">Assignades</h2>
-        <?php render_table_responsable($assigned_rows, 'assignada', $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data]); ?>
+        <?php render_table_responsable($assigned_rows, 'assignada', $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data, 'prioritat_filter' => $prioritat_filter]); ?>
     </div>
 
     <div class="card card-body mb-4">
         <h2 class="h5 mb-3">Historial (totes)</h2>
-        <?php render_table_responsable($history_rows, 'historial', $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data]); ?>
-        <?php render_historial_pagination($historial_page, $total_history_pages ?? 1, $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data]); ?>
+        <?php render_table_responsable($history_rows, 'historial', $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data, 'prioritat_filter' => $prioritat_filter]); ?>
+        <?php render_historial_pagination($historial_page, $total_history_pages ?? 1, $filters ?? ['sort' => $sort, 'dir' => $dir, 'q' => $q, 'data' => $data, 'prioritat_filter' => $prioritat_filter]); ?>
         <?php if (isset($total_history_rows)) : ?>
             <div class="form-text mt-2">Mostrant <?php echo min($historial_per_page, max(0, $total_history_rows - (($historial_page - 1) * $historial_per_page))); ?> de <?php echo (int)$total_history_rows; ?> registres.</div>
         <?php endif; ?>
@@ -605,7 +625,7 @@ if ($schema_ok) {
     <a class="btn btn-outline-secondary" href="/index.php">Tornar</a>
 </div>
 
-    <!-- Modal: Editar descripció i prioritat -->
+    <!-- Modal: Editar només prioritat -->
     <div class="modal fade" id="editarModal" tabindex="-1" aria-labelledby="editarModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -621,6 +641,7 @@ if ($schema_ok) {
                         <input type="hidden" name="dir" value="<?php echo htmlspecialchars((string)$dir); ?>">
                         <input type="hidden" name="q" value="<?php echo htmlspecialchars((string)$q); ?>">
                         <input type="hidden" name="data" value="<?php echo htmlspecialchars((string)$data); ?>">
+                        <input type="hidden" name="prioritat_filter" value="<?php echo htmlspecialchars((string)$prioritat_filter); ?>">
                         <input type="hidden" name="action" value="editar">
                         <input type="hidden" name="id" id="editarId" value="0">
 
@@ -631,11 +652,6 @@ if ($schema_ok) {
                                 <option value="mitja">Mitja</option>
                                 <option value="alta">Alta</option>
                             </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="editarDescripcio" class="form-label">Descripció curta</label>
-                            <textarea class="form-control" id="editarDescripcio" name="descripcio_curta" rows="3" maxlength="255" required></textarea>
                         </div>
 
                         <div class="d-flex gap-2">
@@ -664,6 +680,7 @@ if ($schema_ok) {
                     <input type="hidden" name="dir" value="<?php echo htmlspecialchars((string)$dir); ?>">
                     <input type="hidden" name="q" value="<?php echo htmlspecialchars((string)$q); ?>">
                     <input type="hidden" name="data" value="<?php echo htmlspecialchars((string)$data); ?>">
+                    <input type="hidden" name="prioritat_filter" value="<?php echo htmlspecialchars((string)$prioritat_filter); ?>">
                     <input type="hidden" name="action" value="assignar">
                     <input type="hidden" name="id" id="assignarId" value="0">
 
@@ -707,16 +724,13 @@ if ($schema_ok) {
             var button = event.relatedTarget;
             if (!button) return;
             var id = button.getAttribute('data-incidencia-id') || '0';
-            var desc = button.getAttribute('data-incidencia-desc') || '';
             var prio = (button.getAttribute('data-incidencia-prio') || 'mitja').toLowerCase();
 
             var input = document.getElementById('editarId');
             var label = document.getElementById('editarIncidenciaId');
-            var textarea = document.getElementById('editarDescripcio');
             var select = document.getElementById('editarPrioritat');
             if (input) input.value = id;
             if (label) label.textContent = id;
-            if (textarea) textarea.value = desc;
             if (select) select.value = (['baixa','mitja','alta'].includes(prio) ? prio : 'mitja');
         });
     })();

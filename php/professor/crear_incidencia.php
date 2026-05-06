@@ -76,6 +76,13 @@ function crear_incidencia(mysqli $conn): array
 			'message_html' => 'La descripció és massa llarga (màxim 255 caràcters).',
 		];
 	}
+
+	if (longitud($descripcio_curta) < 20) {
+		return [
+			'type' => 'error',
+			'message_html' => 'La descripció ha de tenir com a mínim 20 caràcters.',
+		];
+	}
 	$sql = "INSERT INTO incidencies (departament, descripcio_curta, localitzacio) VALUES (?, ?, ?)";
 	$stmt = $conn->prepare($sql);
 	if ($stmt === false) {
@@ -208,9 +215,11 @@ function crear_incidencia(mysqli $conn): array
 				id="descripcio_curta"
 				name="descripcio_curta"
 				rows="3"
+				minlength="20"
 				maxlength="255"
 				required
 			><?php echo htmlspecialchars($formulari_descripcio); ?></textarea>
+			<div class="form-text">Mínim 20 caràcters.</div>
 		</div>
 
 		<div class="d-flex gap-2">
