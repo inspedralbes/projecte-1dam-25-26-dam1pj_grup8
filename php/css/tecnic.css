@@ -32,6 +32,27 @@ body {
     color: rgb(238, 238, 238);
 }
 
+/* Priority badges */
+.prio-badge {
+    display: inline-block;
+    padding: 0.18rem 0.5rem;
+    border-radius: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.prio-alta {
+    background-color: #fdecea; /* soft red */
+    color: #ff2e2e;
+}
+.prio-mitja {
+    background-color: #fff7ed; /* soft orange */
+    color: #f85b27;
+}
+.prio-baixa {
+    background-color: #f0fdf4; /* soft green */
+    color: #3bdf7d;
+}
+
 /* CONTENEDOR PRINCIPAL */
 .tecnic-hero {
     height: calc(100vh - 56px);

@@ -250,7 +250,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         echo "<th scope='row'>$id</th>";
         echo "<td>$dep</td>";
         echo "<td>$desc</td>";
-        echo "<td>$prio_label</td>";
+        echo "<td><span class='prio-badge prio-" . htmlspecialchars($prio_raw, ENT_QUOTES) . "'>$prio_label</span></td>";
 		if ($mode === 'historial') {
 			echo "<td>" . ($estat_label !== '' ? $estat_label : "<span class='text-muted'>—</span>") . "</td>";
 		}
