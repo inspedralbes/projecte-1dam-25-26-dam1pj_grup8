@@ -41,12 +41,12 @@ body {
     font-weight: 600;
 }
 .prio-alta {
-    background-color: #fdecea;
+    background-color: #f8e0dd;
     color: #ff2e2e;
 }
 .prio-mitja {
-    background-color: #fff7ed; 
-    color: #a59c4d;
+    background-color: #f7e6d3; 
+    color: #fcbf18;
 }
 .prio-baixa {
     background-color: #f0fdf4; 
