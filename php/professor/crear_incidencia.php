@@ -37,11 +37,12 @@ function crear_incidencia(mysqli $conn): array
 
 	$departament = trim((string)($_POST['departament'] ?? ''));
 	$descripcio_curta = trim((string)($_POST['descripcio_curta'] ?? ''));
+	$email = trim((string)($_POST['email'] ?? ''));
 	$planta = (int) ($_POST['planta'] ?? 0);
 	$aula = (int) ($_POST['aula'] ?? 0);
 	$localitzacio = 'P' . $planta . '_A' . $aula;
 
-	if ($departament === '' || $descripcio_curta === '') {
+	if ($departament === '' || $descripcio_curta === '' || $email === '') {
 		return [
 			'type' => 'error',
 			'message_html' => 'Omple tots els camps obligatoris.',
@@ -83,7 +84,21 @@ function crear_incidencia(mysqli $conn): array
 			'message_html' => 'La descripció ha de tenir com a mínim 20 caràcters.',
 		];
 	}
-	$sql = "INSERT INTO incidencies (departament, descripcio_curta, localitzacio) VALUES (?, ?, ?)";
+
+	if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+		return [
+			'type' => 'error',
+			'message_html' => 'El correu electrònic no és vàlid.',
+		];
+	}
+
+	if (longitud($email) > 255) {
+		return [
+			'type' => 'error',
+			'message_html' => 'El correu electrònic és massa llarg (màxim 255 caràcters).',
+		];
+	}
+	$sql = "INSERT INTO incidencies (departament, descripcio_curta, localitzacio, email) VALUES (?, ?, ?, ?)";
 	$stmt = $conn->prepare($sql);
 	if ($stmt === false) {
 		return [
@@ -92,7 +107,7 @@ function crear_incidencia(mysqli $conn): array
 		];
 	}
 
-	$stmt->bind_param('sss', $departament, $descripcio_curta, $localitzacio);
+	$stmt->bind_param('ssss', $departament, $descripcio_curta, $localitzacio, $email);
 	if ($stmt->execute()) {
 		$nou_id = (int) $conn->insert_id;
 		$data_guardada = '';
@@ -150,6 +165,9 @@ function crear_incidencia(mysqli $conn): array
 	$formulari_descripcio = (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'success')
 		? ''
 		: (string) ($_POST['descripcio_curta'] ?? '');
+	$formulari_email = (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'success')
+		? ''
+		: (string) ($_POST['email'] ?? '');
 	$formulari_planta = (is_array($resultat_creacio) && ($resultat_creacio['type'] ?? '') === 'success')
 		? ''
 		: (string) ($_POST['planta'] ?? '');
@@ -163,6 +181,20 @@ function crear_incidencia(mysqli $conn): array
 	?>
 
 	<form method="POST" action="crear_incidencia.php" class="card card-body">
+		<div class="mb-3">
+			<label for="email" class="form-label">Correu electrònic</label>
+			<input
+				type="email"
+				class="form-control"
+				id="email"
+				name="email"
+				maxlength="255"
+				value="<?php echo htmlspecialchars($formulari_email); ?>"
+				required
+			/>
+			<div class="form-text">Introdueix un correu electrònic vàlid.</div>
+		</div>
+
 		<div class="mb-3">
 			<label for="departament" class="form-label">Departament</label>
 			<select class="form-select" id="departament" name="departament" required>

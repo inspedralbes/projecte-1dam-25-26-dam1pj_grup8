@@ -86,7 +86,8 @@ function ensure_incidencies_schema(mysqli $conn): array
 			estat VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_ESTAT_PENDENT_ASSIGNAR . "',
 			tecnic_assignat VARCHAR(80) NULL,
 			data_inici_tasca TIMESTAMP NULL DEFAULT NULL,
-			data_tancament TIMESTAMP NULL DEFAULT NULL
+			data_tancament TIMESTAMP NULL DEFAULT NULL,
+			email VARCHAR(255) NOT NULL
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
 
 		if ($conn->query($create_sql) === false) {
@@ -108,6 +109,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 		'tecnic_assignat' => "ALTER TABLE incidencies ADD COLUMN tecnic_assignat VARCHAR(80) NULL",
 		'data_inici_tasca' => "ALTER TABLE incidencies ADD COLUMN data_inici_tasca TIMESTAMP NULL DEFAULT NULL",
 		'data_tancament' => "ALTER TABLE incidencies ADD COLUMN data_tancament TIMESTAMP NULL DEFAULT NULL",
+		'email' => "ALTER TABLE incidencies ADD COLUMN email VARCHAR(255) NOT NULL",
 	];
 
 	foreach ($required_columns as $column => $alter_sql) {
