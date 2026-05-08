@@ -49,6 +49,20 @@ Executa l'script de test:
 
 Si tot va bé, veuràs un `Ping result` i un `Write/read OK`.
 
+## MongoDB Compass (local)
+
+Important: `mongo` és el **nom del servei dins Docker Compose**. Només el poden resoldre els contenidors de la mateixa xarxa.
+
+- **Des de PHP dins del contenidor `web`** (config de desenvolupament):
+   - `MONGODB_URI=mongodb://mongo:27017/incidencies`
+
+- **Des de MongoDB Compass al teu ordinador (host)**:
+   - URI: `mongodb://localhost:27017/incidencies?directConnection=true`
+   - Authentication: **None**
+
+Nota: a MongoDB, una base de dades normalment **no apareix** fins que té com a mínim una col·lecció amb dades.
+Si no veus `incidencies` a Compass, executa el test (`docker compose exec web php /var/www/html/test_mongo.php`) o navega per la web perquè el logger escrigui documents a `access_logs`.
+
 ## Fitxers importants
 
 - [images/Dockerfile_php](../images/Dockerfile_php): instal·la `ext-mongodb` i `composer`

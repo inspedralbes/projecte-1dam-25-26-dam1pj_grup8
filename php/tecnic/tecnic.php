@@ -183,9 +183,21 @@ function render_table_tecnic(array $rows, bool $show_actions, array $filters): v
         return;
     }
 
+    $tipo_labels = [
+        INCIDENCIA_TIPOLOGIA_HARDWARE => "Hardware",
+        INCIDENCIA_TIPOLOGIA_SOFTWARE => "Software",
+        INCIDENCIA_TIPOLOGIA_XARXA => "Xarxa",
+        INCIDENCIA_TIPOLOGIA_COMPTES => "Comptes",
+        INCIDENCIA_TIPOLOGIA_IMPRESSIO => "Impressió",
+        INCIDENCIA_TIPOLOGIA_AULES => "Aules",
+        INCIDENCIA_TIPOLOGIA_MOBILS => "Mòbils",
+        INCIDENCIA_TIPOLOGIA_PLATAFORMES => "Plataformes",
+        INCIDENCIA_TIPOLOGIA_SEGURETAT => "Seguretat",
+    ];
+
     echo "<div class='table-responsive scrollable-list'>";
     echo "<table class='table table-sm table-striped align-middle'>";
-    echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Data</th><th scope='col'>Inici tasca</th><th scope='col'>Tancament</th><th scope='col'>Temps</th>";
+    echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Tipologia</th><th scope='col'>Data</th><th scope='col'>Inici tasca</th><th scope='col'>Tancament</th><th scope='col'>Temps</th>";
     if ($show_actions) {
         echo "<th scope='col'>Accions</th>";
     }
@@ -195,6 +207,8 @@ function render_table_tecnic(array $rows, bool $show_actions, array $filters): v
         $id = (int)($row['id'] ?? 0);
         $dep = htmlspecialchars((string)($row['departament'] ?? ''));
         $desc = htmlspecialchars((string)($row['descripcio_curta'] ?? ''));
+        $tipo_raw = strtolower(trim((string)($row['tipologia'] ?? '')));
+        $tipo_label = htmlspecialchars($tipo_labels[$tipo_raw] ?? ($tipo_raw !== '' ? ucfirst($tipo_raw) : '—'));
         $data = htmlspecialchars((string)($row['data'] ?? ''));
         $inici_tasca = (string)($row['data_inici_tasca'] ?? '');
         $tancament = (string)($row['data_tancament'] ?? '');
@@ -203,6 +217,7 @@ function render_table_tecnic(array $rows, bool $show_actions, array $filters): v
         echo "<th scope='row'>$id</th>";
         echo "<td>$dep</td>";
         echo "<td>$desc</td>";
+        echo "<td>$tipo_label</td>";
         echo "<td>$data</td>";
         echo "<td>" . format_simple_datetime($inici_tasca !== '' ? $inici_tasca : null) . "</td>";
         echo "<td>" . format_simple_datetime($tancament !== '' ? $tancament : null) . "</td>";
@@ -375,7 +390,7 @@ if ($schema_ok) {
         $where_sql .= ' AND ' . implode(' AND ', $where_parts);
     }
     $order_col = $order_map_assigned[$sort] ?? 'data_incidencia';
-    $sql1 = "SELECT id, departament, descripcio_curta, data_incidencia, data_inici_tasca, data_tancament FROM incidencies WHERE $where_sql ORDER BY $order_col $dir";
+    $sql1 = "SELECT id, departament, descripcio_curta, tipologia, data_incidencia, data_inici_tasca, data_tancament FROM incidencies WHERE $where_sql ORDER BY $order_col $dir";
     $stmt1 = $conn->prepare($sql1);
     if ($stmt1 !== false) {
         $bind_types = 'ss' . $types;
@@ -389,6 +404,7 @@ if ($schema_ok) {
                         'id' => $row['id'],
                         'departament' => $row['departament'],
                         'descripcio_curta' => $row['descripcio_curta'],
+                        'tipologia' => $row['tipologia'] ?? '',
                         'data' => $row['data_incidencia'],
                         'data_inici_tasca' => $row['data_inici_tasca'] ?? null,
                         'data_tancament' => $row['data_tancament'] ?? null,
@@ -427,7 +443,7 @@ if ($schema_ok) {
     $historial_page = min($historial_page, $total_history_pages);
     $historial_offset = ($historial_page - 1) * $historial_per_page;
 
-    $sql2 = "SELECT id, departament, descripcio_curta, COALESCE(data_tancament, data_incidencia) AS data_hist, data_inici_tasca, data_tancament FROM incidencies WHERE $where_sql2 ORDER BY $order_col2 $dir LIMIT ? OFFSET ?";
+    $sql2 = "SELECT id, departament, descripcio_curta, tipologia, COALESCE(data_tancament, data_incidencia) AS data_hist, data_inici_tasca, data_tancament FROM incidencies WHERE $where_sql2 ORDER BY $order_col2 $dir LIMIT ? OFFSET ?";
     $stmt2 = $conn->prepare($sql2);
     if ($stmt2 !== false) {
         $bind_types2 = 'ss' . $types2 . 'ii';
@@ -441,6 +457,7 @@ if ($schema_ok) {
                         'id' => $row['id'],
                         'departament' => $row['departament'],
                         'descripcio_curta' => $row['descripcio_curta'],
+                        'tipologia' => $row['tipologia'] ?? '',
                         'data' => $row['data_hist'],
                         'data_inici_tasca' => $row['data_inici_tasca'] ?? null,
                         'data_tancament' => $row['data_tancament'] ?? null,

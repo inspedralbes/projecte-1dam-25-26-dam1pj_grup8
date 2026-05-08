@@ -260,7 +260,8 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         INCIDENCIA_TIPOLOGIA_IMPRESSIO => "Impressió",
         INCIDENCIA_TIPOLOGIA_AULES => "Aules",
         INCIDENCIA_TIPOLOGIA_MOBILS => "Mòbils",
-        INCIDENCIA_TIPOLOGIA_PLATAFORMES => "Plataformes",  
+        INCIDENCIA_TIPOLOGIA_PLATAFORMES => "Plataformes",
+        INCIDENCIA_TIPOLOGIA_SEGURETAT => "Seguretat",
     ];
 
     $estat_labels = [
@@ -272,7 +273,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
 
     echo "<div class='table-responsive scrollable-list'>";
     echo "<table class='table table-sm table-striped align-middle'>";
-    echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Prioritat</th>";
+    echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Prioritat</th><th scope='col'>Tipologia</th>";
 	if ($mode === 'historial') {
 		echo "<th scope='col'>Estat</th>";
 	}
@@ -292,6 +293,8 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         $desc = htmlspecialchars($desc_raw);
         $prio_raw = strtolower(trim((string)($row['prioritat'] ?? INCIDENCIA_PRIORITAT_MITJA)));
         $prio_label = htmlspecialchars($prio_labels[$prio_raw] ?? 'Mitja');
+        $tipo_raw = strtolower(trim((string)($row['tipologia'] ?? '')));
+        $tipo_label = htmlspecialchars($tipo_labels[$tipo_raw] ?? ($tipo_raw !== '' ? ucfirst($tipo_raw) : '—'));
         $estat_raw = (string)($row['estat'] ?? '');
         $estat_label = htmlspecialchars($estat_labels[$estat_raw] ?? $estat_raw);
         $data = htmlspecialchars((string)($row['data'] ?? ''));
@@ -302,6 +305,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         echo "<td>$dep</td>";
         echo "<td>$desc</td>";
         echo "<td><span class='prio-badge prio-" . htmlspecialchars($prio_raw, ENT_QUOTES) . "'>$prio_label</span></td>";
+        echo "<td>$tipo_label</td>";
 		if ($mode === 'historial') {
 			echo "<td>" . ($estat_label !== '' ? $estat_label : "<span class='text-muted'>—</span>") . "</td>";
 		}
