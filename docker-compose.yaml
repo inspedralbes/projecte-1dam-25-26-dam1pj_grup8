@@ -15,6 +15,7 @@ services:
       - "8080:80"
     volumes:
       - ./php:/var/www/html
+      - php_vendor:/var/www/html/vendor
     environment:
       VAR1: "sóc una pera i estic al docker-compose"
       VAR2: ${VAR2:-}
@@ -70,3 +71,4 @@ services:
 
 volumes:
   mongo_data:
+  php_vendor:

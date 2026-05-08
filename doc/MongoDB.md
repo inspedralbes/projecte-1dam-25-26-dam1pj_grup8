@@ -34,12 +34,12 @@ Com que hem afegit dependències al contenidor PHP, cal reconstruir:
 - `docker compose build web`
 - `docker compose up -d`
 
-## 4) Instal·lar la llibreria PHP (Composer)
+## 4) Llibreria PHP (Composer)
 
-La dependència està declarada a [php/composer.json](../php/composer.json).
-Instal·la-la dins del contenidor (quedarà a `php/vendor/` perquè és un volum):
+La dependència està declarada a [php/composer.json](../php/composer.json) i bloquejada a [php/composer.lock](../php/composer.lock).
 
-- `docker compose exec web composer install`
+- **Desenvolupament (docker-compose.yaml)**: el contenidor `web` executa automàticament `composer install` a l'arrencada si falta `vendor/autoload.php`.
+- **Producció (docker-compose.prod.yml)**: la imatge ja fa `composer install` durant el build, així que no cal cap pas manual al servidor.
 
 ## 5) Provar la connexió
 

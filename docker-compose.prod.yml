@@ -8,6 +8,8 @@ services:
     environment:
       VAR1: "sóc una pera i estic al docker-compose"
       VAR2: ${VAR2}
+      # MongoDB Atlas (production)
+      MONGODB_URI: ${MONGODB_URI}
     depends_on:
       - db
     restart: unless-stopped

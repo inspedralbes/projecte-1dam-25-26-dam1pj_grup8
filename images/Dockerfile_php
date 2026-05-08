@@ -1,5 +1,8 @@
 FROM php:apache
 
+COPY entrypoint.sh /usr/local/bin/project-entrypoint
+RUN chmod +x /usr/local/bin/project-entrypoint
+
 # Composer (for installing PHP libraries into the mounted project folder)
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -25,5 +28,8 @@ RUN apt-get update \
         unzip \
         zip \
     && rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT ["/usr/local/bin/project-entrypoint"]
+CMD ["apache2-foreground"]
 
 
