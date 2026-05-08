@@ -1,0 +1,54 @@
+name: CI/CD produccio
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      VAR2: test
+      MYSQL_ROOT_PASSWORD: test
+      MYSQL_USER: test
+      MYSQL_PASSWORD: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validar docker compose
+        run: docker compose -f docker-compose.prod.yml config
+
+      - name: Build imatge de produccio
+        run: docker build -f images/Dockerfile_php_prod -t projecte-web:ci .
+
+  deploy:
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy per SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          VAR2: ${{ secrets.PROD_VAR2 }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.PROD_MYSQL_ROOT_PASSWORD }}
+          MYSQL_USER: ${{ secrets.PROD_MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.PROD_MYSQL_PASSWORD }}
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          envs: VAR2,MYSQL_ROOT_PASSWORD,MYSQL_USER,MYSQL_PASSWORD
+          script: |
+            cd "${{ secrets.PROD_DEPLOY_PATH }}"
+            cat > .env <<EOF
+            VAR2=${VAR2}
+            MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+            MYSQL_USER=${MYSQL_USER}
+            MYSQL_PASSWORD=${MYSQL_PASSWORD}
+            EOF
+            git pull origin main
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
