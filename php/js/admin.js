@@ -1,5 +1,6 @@
 let incidenciesStatusChart;
 let incidenciesTypePriorityChart;
+let accessTrendChart;
 
 
 async function cargarStats(){
@@ -28,20 +29,9 @@ let url=`admin_stats.php?${params.toString()}`;
 let r=await fetch(url);
 let data=await r.json();
 
-
-// Si hay filtro de fechas, mostrar totales de incidencias
-const hasDateFilter = (inicio && fin);
-const hasIncidenciesData = Array.isArray(data.incidencies?.status) && data.incidencies.status.length > 0;
-if (hasDateFilter && hasIncidenciesData) {
-  const totalIncidencies = data.incidencies.status.reduce((sum, item) => sum + parseInt(item.total || 0), 0);
-  document.getElementById('totalAccess').innerText = totalIncidencies;
-  document.getElementById('totalPages').innerText = '(Incidències filtrades)';
-  document.getElementById('activeUsers').innerText = data.incidencies.status.length + ' estat(s)';
-} else {
-  document.getElementById('totalAccess').innerText=data.total;
-  document.getElementById('totalPages').innerText=data.pagesCount;
-  document.getElementById('activeUsers').innerText=data.usersCount;
-}
+document.getElementById('totalAccess').innerText=data.total;
+document.getElementById('totalPages').innerText=data.pagesCount;
+document.getElementById('activeUsers').innerText=data.usersCount;
 
 
 
@@ -71,6 +61,41 @@ pagesHTML+=`
 });
 
 document.getElementById('pagesTable').innerHTML=pagesHTML;
+
+
+// Access trend chart
+const trendData = Array.isArray(data.trend) ? data.trend : [];
+const trendLabels = trendData.map(x => x.dia);
+const trendTotals = trendData.map(x => parseInt(x.total || 0));
+
+if(accessTrendChart) accessTrendChart.destroy();
+
+accessTrendChart=new Chart(
+document.getElementById('accessTrendChart'),
+{
+type:'line',
+data:{
+labels:trendLabels,
+datasets:[{
+label:'Accessos',
+data:trendTotals,
+borderColor:'#60a5fa',
+backgroundColor:'rgba(96,165,250,0.2)',
+fill:true,
+tension:0.2
+}]
+},
+options:{
+responsive:true,
+plugins:{
+legend:{position:'bottom'}
+},
+scales:{
+y:{beginAtZero:true}
+}
+}
+}
+);
 
 
 

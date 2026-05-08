@@ -6,11 +6,8 @@ $showUsuarisButton = true;
 
 include __DIR__ . '/../incidencies/header.php';
 require_once __DIR__ . '/../incidencies/connexio.php';
-require_once __DIR__ . '/../incidencies/access_logs_schema.php';
 require_once __DIR__ . '/../incidencies/usuari_schema.php';
 require_once __DIR__ . '/../incidencies/tecnic_schema.php';
-
-ensure_access_logs_schema($conn);
 
 $alert = null;
 $schema_result = ensure_usuari_schema($conn);
@@ -388,6 +385,13 @@ if ($schema_ok) {
 
     <!-- GRAFICOS -->
     <div class="row g-4 mb-5">
+
+        <div class="col-12">
+            <div class="chart-box">
+                <h4>Accessos per dia</h4>
+                <canvas id="accessTrendChart"></canvas>
+            </div>
+        </div>
 
         <div class="col-lg-5">
             <div class="chart-box chart-box-compact">

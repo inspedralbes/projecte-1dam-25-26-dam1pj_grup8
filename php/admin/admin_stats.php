@@ -1,12 +1,12 @@
 <?php
 
 require_once __DIR__ . '/../incidencies/connexio.php';
-require_once __DIR__ . '/../incidencies/access_logs_schema.php';
 require_once __DIR__ . '/../incidencies/incidencies_schema.php';
+require_once __DIR__ . '/../incidencies/mongo_connexio.php';
+require_once __DIR__ . '/../incidencies/logger.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-ensure_access_logs_schema($conn);
 ensure_incidencies_schema($conn);
 
 function clean_date(?string $value): ?string
@@ -22,9 +22,45 @@ $inicio = clean_date($_GET['inicio'] ?? null);
 $fin = clean_date($_GET['fin'] ?? null);
 $usuario = trim((string)($_GET['usuario'] ?? ''));
 $pagina = trim((string)($_GET['pagina'] ?? ''));
-
 $where = [];
 $incidencies_where = [];
+
+// MongoDB filters (access logs)
+$mongoMatch = [];
+
+function mongo_match_stage(array $match)
+{
+    // MongoDB requires $match to be a document. An empty PHP array becomes an array,
+    // so we coerce it to an empty object.
+    return count($match) > 0 ? $match : (object)[];
+}
+
+if ($inicio !== null || $fin !== null) {
+    if ($inicio !== null) {
+        $start = new DateTimeImmutable($inicio . ' 00:00:00');
+    } else {
+        $start = new DateTimeImmutable('1970-01-01 00:00:00');
+    }
+
+    if ($fin !== null) {
+        $end = new DateTimeImmutable($fin . ' 23:59:59');
+    } else {
+        $end = new DateTimeImmutable('2100-01-01 23:59:59');
+    }
+
+    $mongoMatch['timestamp'] = [
+        '$gte' => new MongoDB\BSON\UTCDateTime($start->getTimestamp() * 1000),
+        '$lte' => new MongoDB\BSON\UTCDateTime($end->getTimestamp() * 1000),
+    ];
+}
+
+if ($usuario !== '') {
+    $mongoMatch['user'] = $usuario;
+}
+
+if ($pagina !== '') {
+    $mongoMatch['url'] = new MongoDB\BSON\Regex(preg_quote($pagina, '/'), 'i');
+}
 
 if ($inicio !== null) {
     $i = $conn->real_escape_string($inicio);
@@ -52,35 +88,70 @@ if ($pagina !== '') {
 $filter = count($where) > 0 ? (' WHERE ' . implode(' AND ', $where)) : '';
 $incidenciesFilter = count($incidencies_where) > 0 ? (' WHERE ' . implode(' AND ', $incidencies_where)) : '';
 
-$total = (int)($conn->query("SELECT COUNT(*) total FROM access_logs $filter")->fetch_assoc()['total'] ?? 0);
-$pagesCount = (int)($conn->query("SELECT COUNT(DISTINCT page) total FROM access_logs $filter")->fetch_assoc()['total'] ?? 0);
-$usersCount = (int)($conn->query("SELECT COUNT(DISTINCT username) total FROM access_logs $filter")->fetch_assoc()['total'] ?? 0);
+// Access stats now come from MongoDB
+$mongoDb = mongo_db();
+$logs = $mongoDb->selectCollection('access_logs');
+
+$total = (int) $logs->countDocuments($mongoMatch);
+
+$pagesCountAgg = $logs->aggregate([
+    ['$match' => mongo_match_stage($mongoMatch)],
+    ['$group' => ['_id' => '$url']],
+    ['$count' => 'total'],
+]);
+$pagesCountDoc = $pagesCountAgg->toArray();
+$pagesCount = (int) (($pagesCountDoc[0]->total ?? 0));
+
+$usersCountAgg = $logs->aggregate([
+    ['$match' => mongo_match_stage(array_merge($mongoMatch, ['user' => ['$ne' => null]]))],
+    ['$group' => ['_id' => '$user']],
+    ['$count' => 'total'],
+]);
+$usersCountDoc = $usersCountAgg->toArray();
+$usersCount = (int) (($usersCountDoc[0]->total ?? 0));
 
 $pages = [];
-$res = $conn->query("SELECT page, COUNT(*) total FROM access_logs $filter GROUP BY page ORDER BY total DESC LIMIT 5");
-if ($res !== false) {
-    while ($r = $res->fetch_assoc()) {
-        $pages[] = $r;
-    }
-    $res->free();
+$pagesAgg = $logs->aggregate([
+    ['$match' => mongo_match_stage($mongoMatch)],
+    ['$group' => ['_id' => '$url', 'total' => ['$sum' => 1]]],
+    ['$sort' => ['total' => -1]],
+    ['$limit' => 5],
+    ['$project' => ['_id' => 0, 'page' => '$_id', 'total' => 1]],
+]);
+foreach ($pagesAgg as $doc) {
+    $pages[] = ['page' => (string)($doc->page ?? ''), 'total' => (int)($doc->total ?? 0)];
 }
 
 $users = [];
-$res = $conn->query("SELECT username, COUNT(*) total FROM access_logs $filter GROUP BY username ORDER BY total DESC LIMIT 5");
-if ($res !== false) {
-    while ($r = $res->fetch_assoc()) {
-        $users[] = $r;
-    }
-    $res->free();
+$usersAgg = $logs->aggregate([
+    ['$match' => mongo_match_stage(array_merge($mongoMatch, ['user' => ['$ne' => null]]))],
+    ['$group' => ['_id' => '$user', 'total' => ['$sum' => 1]]],
+    ['$sort' => ['total' => -1]],
+    ['$limit' => 5],
+    ['$project' => ['_id' => 0, 'username' => '$_id', 'total' => 1]],
+]);
+foreach ($usersAgg as $doc) {
+    $users[] = ['username' => (string)($doc->username ?? ''), 'total' => (int)($doc->total ?? 0)];
 }
 
 $trend = [];
-$res = $conn->query("SELECT DATE(access_time) dia, COUNT(*) total FROM access_logs $filter GROUP BY dia ORDER BY dia");
-if ($res !== false) {
-    while ($r = $res->fetch_assoc()) {
-        $trend[] = $r;
-    }
-    $res->free();
+$trendAgg = $logs->aggregate([
+    ['$match' => mongo_match_stage($mongoMatch)],
+    ['$group' => [
+        '_id' => [
+            '$dateToString' => [
+                'format' => '%Y-%m-%d',
+                'date' => '$timestamp',
+                'timezone' => 'UTC',
+            ],
+        ],
+        'total' => ['$sum' => 1],
+    ]],
+    ['$sort' => ['_id' => 1]],
+    ['$project' => ['_id' => 0, 'dia' => '$_id', 'total' => 1]],
+]);
+foreach ($trendAgg as $doc) {
+    $trend[] = ['dia' => (string)($doc->dia ?? ''), 'total' => (int)($doc->total ?? 0)];
 }
 
 $incidenciesStatus = [];

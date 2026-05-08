@@ -17,3 +17,6 @@ Llistat d'alguns dels punts que han de quedar explicats en aquesta carpeta. Pode
  * Aplicació Android
  * Altres elements importants.
  * ...
+
+## MongoDB
+Guia de connexió a MongoDB Atlas des de PHP: [MongoDB.md](MongoDB.md)
