@@ -25,6 +25,12 @@ pagina: (pagina || '').trim()
 
 let url=`admin_stats.php?${params.toString()}`;
 
+// Update "View JSON" link
+const statsLink = document.getElementById('statsLink');
+if (statsLink) {
+  statsLink.href = url;
+}
+
 
 let r=await fetch(url);
 let data=await r.json();
