@@ -58,7 +58,34 @@ if (!defined('INCIDENCIA_PRIORITAT_MITJA')) {
 if (!defined('INCIDENCIA_PRIORITAT_ALTA')) {
 	define('INCIDENCIA_PRIORITAT_ALTA', 'alta');
 }
-
+//añadir tablas de tipologia 
+if (!defined('INCIDENCIA_TIPOLOGIA_HARDWARE')) {
+	define('INCIDENCIA_TIPOLOGIA_HARDWARE', 'hardware');
+}
+if (!defined('INCIDENCIA_TIPOLOGIA_SOFTWARE')) {
+	define('INCIDENCIA_TIPOLOGIA_SOFTWARE', 'software');
+}
+if (!defined('INCIDENCIA_TIPOLOGIA_XARXA')) {
+	define('INCIDENCIA_TIPOLOGIA_XARXA', 'xarxa');
+}
+if (!defined('INCIDENCIA_TIPOLOGIA_COMPTES')) {
+	define('INCIDENCIA_TIPOLOGIA_COMPTES', 'comptes');
+}
+if (!defined('INCIDENCIA_TIPOLOGIA_IMPRESSIO')) {
+	define('INCIDENCIA_TIPOLOGIA_IMPRESSIO', 'impressio');
+}
+if (!defined('INCIDENCIA_TIPOLOGIA_AULES')) {
+	define('INCIDENCIA_TIPOLOGIA_AULES', 'aules');
+}
+if (!defined('INCIDENCIA_TIPOLOGIA_MOBILS')) {
+	define('INCIDENCIA_TIPOLOGIA_MOBILS', 'mobils');
+}
+if (!defined('INCIDENCIA_TIPOLOGIA_PLATAFORMES')) {
+	define('INCIDENCIA_TIPOLOGIA_PLATAFORMES', 'plataformes');
+}
+if (!defined('INCIDENCIA_TIPOLOGIA_SEGURETAT')) {
+	define('INCIDENCIA_TIPOLOGIA_SEGURETAT', 'seguretat');
+}
 if (!defined('INCIDENCIA_TECNIC_PER_DEFECTE')) {
 	// This project currently has role-based screens without per-user login.
 	// We still store who it's assigned to, so we use a single default label.
@@ -82,6 +109,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 			descripcio_curta VARCHAR(255) NOT NULL,
 			localitzacio ENUM($localitzacions_sql) NULL,
 			prioritat VARCHAR(10) NOT NULL DEFAULT '" . INCIDENCIA_PRIORITAT_MITJA . "',
+			tipologia VARCHAR(30) NOT NULL DEFAULT 'hardware',,
 			data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			estat VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_ESTAT_PENDENT_ASSIGNAR . "',
 			tecnic_assignat VARCHAR(80) NULL,
@@ -104,6 +132,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 		'descripcio_curta' => "ALTER TABLE incidencies ADD COLUMN descripcio_curta VARCHAR(255) NOT NULL",
 		'localitzacio' => "ALTER TABLE incidencies ADD COLUMN localitzacio ENUM($localitzacions_sql) NULL AFTER descripcio_curta",
 		'prioritat' => "ALTER TABLE incidencies ADD COLUMN prioritat VARCHAR(10) NOT NULL DEFAULT '" . INCIDENCIA_PRIORITAT_MITJA . "'",
+		'tipologia' => "ALTER TABLE incidencies ADD COLUMN tipologia VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_TIPOLOGIA_HARDWARE . "'",
 		'data_incidencia' => "ALTER TABLE incidencies ADD COLUMN data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
 		'estat' => "ALTER TABLE incidencies ADD COLUMN estat VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_ESTAT_PENDENT_ASSIGNAR . "'",
 		'tecnic_assignat' => "ALTER TABLE incidencies ADD COLUMN tecnic_assignat VARCHAR(80) NULL",

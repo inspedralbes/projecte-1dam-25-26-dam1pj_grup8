@@ -9,11 +9,12 @@ if ($id <= 0) {
     include 'footer.php';
     exit;
 }
-
+//leer tipologia de la incidencia
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $departament = trim((string)($_POST['departament'] ?? ''));
     $descripcio_curta = trim((string)($_POST['descripcio_curta'] ?? ''));
-
+    $tipologia = strtolower(trim((string)($_POST['tipologia'] ?? '')));
+//validaciones
     $errors = [];
     if ($departament === '' || $descripcio_curta === '') {
         $errors[] = 'Omple tots els camps obligatoris.';
@@ -25,12 +26,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'La descripció és massa llarga (màxim 255 caràcters).';
     }
 
+    $tipologies_valides = [
+    INCIDENCIA_TIPOLOGIA_HARDWARE,
+    INCIDENCIA_TIPOLOGIA_SOFTWARE,
+    INCIDENCIA_TIPOLOGIA_XARXA,
+    INCIDENCIA_TIPOLOGIA_COMPTES,
+    INCIDENCIA_TIPOLOGIA_IMPRESSIO,
+    INCIDENCIA_TIPOLOGIA_AULES,
+    INCIDENCIA_TIPOLOGIA_MOBILS,
+    INCIDENCIA_TIPOLOGIA_PLATAFORMES,
+    INCIDENCIA_TIPOLOGIA_SEGURETAT,
+    ];
+
+    if (!in_array($tipologia, $tipologies_valides, true)) {
+    $errors[] = 'La tipologia no és vàlida.';   
+    }
+    //actualizan la query de update
     if (empty($errors)) {
-        $stmt = $conn->prepare('UPDATE incidencies SET departament = ?, descripcio_curta = ? WHERE id = ?');
+        $stmt = $conn->prepare('UPDATE incidencies SET departament = ?, descripcio_curta = ?, tipologia = ? WHERE id = ?');
         if ($stmt === false) {
             $errors[] = 'Error preparant la consulta: ' . htmlspecialchars($conn->error);
-        } else {
-            $stmt->bind_param('ssi', $departament, $descripcio_curta, $id);
+        } else { //cambiamos el bind_param
+            $stmt->bind_param('ssi', $departament, $descripcio_curta,$tipologia, $id);
             if ($stmt->execute()) {
                 header('Location: editar_incidencia.php?' . http_build_query(['id' => $id, 'saved' => 1]));
                 exit;
@@ -45,7 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $success = (isset($_GET['saved']) && (string)$_GET['saved'] === '1');
 
 $row = null;
-$stmt = $conn->prepare('SELECT id, departament, descripcio_curta, data_incidencia FROM incidencies WHERE id = ?');
+//cargar desde BD
+$stmt = $conn->prepare('SELECT id, departament, descripcio_curta, tipologia, data_incidencia FROM incidencies WHERE id = ?');
 if ($stmt !== false) {
     $stmt->bind_param('i', $id);
     if ($stmt->execute()) {
@@ -89,6 +107,31 @@ include 'header.php';
         <div class="mb-3">
             <label for="descripcio_curta" class="form-label">Descripció curta</label>
             <textarea id="descripcio_curta" name="descripcio_curta" class="form-control" rows="3" maxlength="255" required><?php echo htmlspecialchars((string)($_POST['descripcio_curta'] ?? $row['descripcio_curta'])); ?></textarea>
+        </div>
+        
+        //añadir select de tipologia al form
+        <div class="mb-3">
+            <label for="tipologia" class="form-label">Tipologia</label>
+
+            <select id="tipologia" name="tipologia" class="form-select" required>
+                <option value="hardware" <?php echo (($_POST['tipologia'] ?? $row['tipologia']) === 'hardware') ? 'selected' : ''; ?>>Hardware</option>
+
+                <option value="software" <?php echo (($_POST['tipologia'] ?? $row['tipologia']) === 'software') ? 'selected' : ''; ?>>Software</option>
+
+                <option value="xarxa" <?php echo (($_POST['tipologia'] ?? $row['tipologia']) === 'xarxa') ? 'selected' : ''; ?>>Xarxa</option>
+
+                <option value="comptes" <?php echo (($_POST['tipologia'] ?? $row['tipologia']) === 'comptes') ? 'selected' : ''; ?>>Comptes</option>
+
+                <option value="impressio" <?php echo (($_POST['tipologia'] ?? $row['tipologia']) === 'impressio') ? 'selected' : ''; ?>>Impressió</option>
+
+                <option value="aules" <?php echo (($_POST['tipologia'] ?? $row['tipologia']) === 'aules') ? 'selected' : ''; ?>>Aules</option>
+
+                <option value="mobils" <?php echo (($_POST['tipologia'] ?? $row['tipologia']) === 'mobils') ? 'selected' : ''; ?>>Mòbils</option>
+
+                <option value="plataformes" <?php echo (($_POST['tipologia'] ?? $row['tipologia']) === 'plataformes') ? 'selected' : ''; ?>>Plataformes</option>
+
+                <option value="seguretat" <?php echo (($_POST['tipologia'] ?? $row['tipologia']) === 'seguretat') ? 'selected' : ''; ?>>Seguretat</option>
+            </select>
         </div>
 
         <div class="d-flex gap-2">

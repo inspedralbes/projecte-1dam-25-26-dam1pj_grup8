@@ -48,7 +48,31 @@ $sort = (string)($_POST['sort'] ?? $_GET['sort'] ?? 'data');
 $dir = strtolower((string)($_POST['dir'] ?? $_GET['dir'] ?? 'desc'));
 $q = trim((string)($_POST['q'] ?? $_GET['q'] ?? ''));
 $data = trim((string)($_POST['data'] ?? $_GET['data'] ?? ''));
+
 $prioritat_filter = strtolower(trim((string)($_POST['prioritat_filter'] ?? $_GET['prioritat_filter'] ?? '')));
+$tipologia_filter = strtolower(trim((string)($_POST['tipologia_filter'] ?? $_GET['tipologia_filter'] ?? '')));
+
+//valors que pot tenir prioritat
+$prioritats_valides = [
+    INCIDENCIA_PRIORITAT_BAIXA,
+    INCIDENCIA_PRIORITAT_MITJA,
+    INCIDENCIA_PRIORITAT_ALTA,
+];
+//valors que pot tenir tipologia
+$tipologies_valides = [
+    INCIDENCIA_TIPOLOGIA_HARDWARE,
+    INCIDENCIA_TIPOLOGIA_SOFTWARE,
+    INCIDENCIA_TIPOLOGIA_XARXA,
+    INCIDENCIA_TIPOLOGIA_COMPTES,
+    INCIDENCIA_TIPOLOGIA_IMPRESSIO,
+    INCIDENCIA_TIPOLOGIA_AULES,
+    INCIDENCIA_TIPOLOGIA_MOBILS,
+    INCIDENCIA_TIPOLOGIA_PLATAFORMES,
+    INCIDENCIA_TIPOLOGIA_SEGURETAT,
+];
+
+
+
 $historial_page = max(1, (int)($_POST['historial_page'] ?? $_GET['historial_page'] ?? 1));
 $historial_per_page = 10;
 
@@ -60,13 +84,11 @@ if (!in_array($dir, ['asc', 'desc'], true)) {
     $dir = 'desc';
 }
 
-$prioritats_valides = [
-    INCIDENCIA_PRIORITAT_BAIXA,
-    INCIDENCIA_PRIORITAT_MITJA,
-    INCIDENCIA_PRIORITAT_ALTA,
-];
 if ($prioritat_filter !== '' && !in_array($prioritat_filter, $prioritats_valides, true)) {
     $prioritat_filter = '';
+}
+if ($tipologia_filter !== '' && !in_array($tipologia_filter, $tipologies_valides, true)) {
+    $tipologia_filter = '';
 }
 // Accept YYYY-MM-DD only; otherwise ignore.
 if ($data !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
@@ -99,52 +121,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $schema_ok) {
     ];
 
     if ($id > 0 && $action === 'assignar') {
-        $tecnic_assignacio = trim((string)($_POST['tecnic'] ?? ''));
-        if ($tecnic_assignacio === '' || !in_array($tecnic_assignacio, $tecnics_disponibles, true)) {
-            $alert = ['type' => 'warning', 'message' => "Has d'escollir un tècnic per assignar la incidència #$id."];
-        } else {
-        $stmt = $conn->prepare('UPDATE incidencies SET estat = ?, tecnic_assignat = ? WHERE id = ? AND estat = ?');
+
+    $tecnic_assignacio = trim((string)($_POST['tecnic'] ?? ''));
+
+    if ($tecnic_assignacio === '') {
+        $alert = ['type' => 'warning', 'message' => "Selecciona un tècnic."];
+    } else {
+
+        $stmt = $conn->prepare("
+            UPDATE incidencies 
+            SET estat = ?, tecnic_assignat = ? 
+            WHERE id = ?
+        ");
+
         if ($stmt === false) {
-            $alert = ['type' => 'danger', 'message' => 'Error preparant la consulta: ' . $conn->error];
+            $alert = ['type' => 'danger', 'message' => $conn->error];
         } else {
+
             $estat_assignada = INCIDENCIA_ESTAT_ASSIGNADA;
-            $estat_pendent = INCIDENCIA_ESTAT_PENDENT_ASSIGNAR;
-            $stmt->bind_param('ssis', $estat_assignada, $tecnic_assignacio, $id, $estat_pendent);
-            if ($stmt->execute() && $stmt->affected_rows > 0) {
-                $alert = ['type' => 'success', 'message' => "Incidència #$id assignada a $tecnic_assignacio."];
+
+            $stmt->bind_param('ssi', $estat_assignada, $tecnic_assignacio, $id);
+
+            if ($stmt->execute()) {
+                $alert = ['type' => 'success', 'message' => "Incidència #$id assignada."];
             } else {
-                $alert = ['type' => 'warning', 'message' => "No s'ha pogut assignar la incidència #$id (potser ja està assignada)."];
+                $alert = ['type' => 'warning', 'message' => "No s'ha pogut assignar #$id."];
             }
+
             $stmt->close();
         }
-        }
     }
-
+}
     if ($id > 0 && $action === 'editar') {
-        $nova_prioritat = strtolower(trim((string)($_POST['prioritat'] ?? '')));
 
-        if (!in_array($nova_prioritat, $prioritats_valides, true)) {
-            $alert = ['type' => 'warning', 'message' => "Prioritat no vàlida per la incidència #$id."];
+    $nova_prioritat = strtolower(trim((string)($_POST['prioritat'] ?? '')));
+    $nova_tipologia = strtolower(trim((string)($_POST['tipologia'] ?? '')));
+
+    if (!in_array($nova_prioritat, $prioritats_valides, true)) {
+        $alert = ['type' => 'warning', 'message' => "Prioritat no vàlida per la incidència #$id."];
+    } elseif (!in_array($nova_tipologia, $tipologies_valides, true)) {
+        $alert = ['type' => 'warning', 'message' => "Tipologia no vàlida per la incidència #$id."];
+    } else {
+
+        $stmt = $conn->prepare("
+            UPDATE incidencies 
+            SET prioritat = ?, tipologia = ? 
+            WHERE id = ?
+        ");
+
+        if ($stmt === false) {
+            $alert = ['type' => 'danger', 'message' => 'Error: ' . $conn->error];
         } else {
-            $placeholders = implode(',', array_fill(0, count($estats_editables), '?'));
-            $sql = "UPDATE incidencies SET prioritat = ? WHERE id = ? AND estat IN ($placeholders)";
-            $stmt = $conn->prepare($sql);
-            if ($stmt === false) {
-                $alert = ['type' => 'danger', 'message' => 'Error preparant la consulta: ' . $conn->error];
+
+            $stmt->bind_param('ssi', $nova_prioritat, $nova_tipologia, $id);
+
+            if ($stmt->execute()) {
+                $alert = ['type' => 'success', 'message' => "Incidència #$id actualitzada."];
             } else {
-                $types = 'si' . str_repeat('s', count($estats_editables));
-                $params = array_merge([$nova_prioritat, $id], $estats_editables);
-                $stmt->bind_param($types, ...$params);
-                if ($stmt->execute() && $stmt->affected_rows > 0) {
-                    $alert = ['type' => 'success', 'message' => "Incidència #$id actualitzada (prioritat)."];
-                } else {
-                    $alert = ['type' => 'warning', 'message' => "No s'ha pogut actualitzar la incidència #$id (potser ja està tancada o rebutjada)."];
-                }
-                $stmt->close();
+                $alert = ['type' => 'warning', 'message' => "No s'ha pogut actualitzar #$id."];
             }
+
+            $stmt->close();
         }
     }
-
+}
     if ($id > 0 && $action === 'rebutjar') {
         $placeholders = implode(',', array_fill(0, count($estats_editables), '?'));
         $sql = "UPDATE incidencies SET estat = ?, tecnic_assignat = NULL, data_inici_tasca = NULL, data_tancament = NOW() WHERE id = ? AND estat IN ($placeholders)";
@@ -206,12 +246,23 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         echo "<div class='text-muted'>No hi ha incidències per mostrar.</div>";
         return;
     }
-
+    //asignem valor a les variables de prioritat, tipologia i estat per mostrar-les a la taula
     $prio_labels = [
         INCIDENCIA_PRIORITAT_ALTA => 'Alta',
         INCIDENCIA_PRIORITAT_MITJA => 'Mitja',
         INCIDENCIA_PRIORITAT_BAIXA => 'Baixa',
     ];
+    $tipo_labels = [
+        INCIDENCIA_TIPOLOGIA_HARDWARE => "Hardware",
+        INCIDENCIA_TIPOLOGIA_SOFTWARE => "Software",
+        INCIDENCIA_TIPOLOGIA_XARXA => "Xarxa",
+        INCIDENCIA_TIPOLOGIA_COMPTES => "Comptes",
+        INCIDENCIA_TIPOLOGIA_IMPRESSIO => "Impressió",
+        INCIDENCIA_TIPOLOGIA_AULES => "Aules",
+        INCIDENCIA_TIPOLOGIA_MOBILS => "Mòbils",
+        INCIDENCIA_TIPOLOGIA_PLATAFORMES => "Plataformes",  
+    ];
+
     $estat_labels = [
         INCIDENCIA_ESTAT_PENDENT_ASSIGNAR => "Pendent",
         INCIDENCIA_ESTAT_ASSIGNADA => "Assignada",
@@ -387,7 +438,7 @@ if ($schema_ok) {
         'data' => 'data_hist',
     ];
 
-    $build_where = function (bool $is_history) use ($q, $data, $prioritat_filter): array {
+    $build_where = function (bool $is_history) use ($q, $data, $prioritat_filter, $tipologia_filter): array {
         $where = [];
         $types = '';
         $params = [];
@@ -415,6 +466,11 @@ if ($schema_ok) {
             $types .= 's';
             $params[] = $prioritat_filter;
         }
+        if ($tipologia_filter !== '') {
+            $where[] = 'tipologia = ?';
+             $types .= 's';
+            $params[] = $tipologia_filter;
+        }
 
         return [$where, $types, $params];
     };
@@ -431,7 +487,8 @@ if ($schema_ok) {
         $where_sql .= ' AND ' . implode(' AND ', $where_parts);
     }
     $order_col = $order_map_pending_assigned[$sort] ?? 'data_incidencia';
-    $sql1 = "SELECT id, departament, descripcio_curta, prioritat, data_incidencia FROM incidencies WHERE $where_sql ORDER BY $order_col $dir";
+    //mostrar incidencia pendents de assignar
+    $sql1 = "SELECT id, departament, descripcio_curta, prioritat,tipologia, data_incidencia FROM incidencies WHERE $where_sql ORDER BY $order_col $dir";
     $stmt1 = $conn->prepare($sql1);
     if ($stmt1 !== false) {
         $bind_types = 's' . $types;
@@ -446,6 +503,7 @@ if ($schema_ok) {
                         'departament' => $row['departament'],
                         'descripcio_curta' => $row['descripcio_curta'],
 						'prioritat' => $row['prioritat'] ?? INCIDENCIA_PRIORITAT_MITJA,
+                        'tipologia' => $row['tipologia'] ?? INCIDENCIA_TIPOLOGIA_HARDWARE,
                         'data' => $row['data_incidencia'],
                     ];
                 }
@@ -461,7 +519,8 @@ if ($schema_ok) {
         $where_sql2 .= ' AND ' . implode(' AND ', $where_parts2);
     }
     $order_col2 = $order_map_pending_assigned[$sort] ?? 'data_incidencia';
-    $sql2 = "SELECT id, departament, descripcio_curta, prioritat, data_incidencia, tecnic_assignat FROM incidencies WHERE $where_sql2 ORDER BY $order_col2 $dir";
+    //mostrar incidencias assignades
+    $sql2 = "SELECT id, departament, descripcio_curta,  prioritat, tipologia, data_incidencia, tecnic_assignat FROM incidencies WHERE $where_sql2 ORDER BY $order_col2 $dir";
     $stmt2 = $conn->prepare($sql2);
     if ($stmt2 !== false) {
         $bind_types2 = 's' . $types2;
@@ -476,6 +535,7 @@ if ($schema_ok) {
                         'departament' => $row['departament'],
                         'descripcio_curta' => $row['descripcio_curta'],
 						'prioritat' => $row['prioritat'] ?? INCIDENCIA_PRIORITAT_MITJA,
+                        'tipologia' => $row['tipologia'] ?? INCIDENCIA_TIPOLOGIA_HARDWARE,
                         'data' => $row['data_incidencia'],
                         'tecnic_assignat' => $row['tecnic_assignat'],
                     ];
@@ -635,7 +695,7 @@ if ($schema_ok) {
                 </div>
                 <div class="modal-body">
                     <p class="text-muted mb-3">Editant la incidència <span class="fw-bold">#<span id="editarIncidenciaId">—</span></span>.</p>
-
+                     <!-- valors modificar al editar -->
                     <form method="POST" id="editarForm">
                         <input type="hidden" name="sort" value="<?php echo htmlspecialchars((string)$sort); ?>">
                         <input type="hidden" name="dir" value="<?php echo htmlspecialchars((string)$dir); ?>">
@@ -644,13 +704,29 @@ if ($schema_ok) {
                         <input type="hidden" name="prioritat_filter" value="<?php echo htmlspecialchars((string)$prioritat_filter); ?>">
                         <input type="hidden" name="action" value="editar">
                         <input type="hidden" name="id" id="editarId" value="0">
-
+                        <!--  editar prioritat -->
                         <div class="mb-3">
                             <label for="editarPrioritat" class="form-label">Prioritat</label>
                             <select class="form-select" id="editarPrioritat" name="prioritat" required>
                                 <option value="baixa">Baixa</option>
                                 <option value="mitja">Mitja</option>
                                 <option value="alta">Alta</option>
+                            </select>
+                        </div>
+                         <!-- //editar tipologia -->
+                        <div class="mb-3">
+                            <label for="editarTipologia" class="form-label">Tipologia</label>
+
+                            <select class="form-select" id="editarTipologia" name="tipologia" required>
+                                <option value="hardware">Hardware</option>
+                                <option value="software">Software</option>
+                                <option value="xarxa">Xarxa</option>
+                                <option value="comptes">Comptes</option>
+                                <option value="impressio">Impressió</option>
+                                <option value="aules">Aules</option>
+                                <option value="mobils">Mòbils</option>
+                                <option value="plataformes">Plataformes</option>
+                                <option value="seguretat">Seguretat</option>
                             </select>
                         </div>
 
