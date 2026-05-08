@@ -10,7 +10,13 @@
 // Backward-compat:
 //   - MONGO_URI + MONGO_DB
 
-require_once __DIR__ . '/../vendor/autoload.php';
+// Composer autoload (mongodb/mongodb). In development, this is created automatically
+// by the Docker entrypoint. If it's missing, we avoid a fatal error so the app can
+// still run (Mongo features will be unavailable).
+$__mongo_autoload = __DIR__ . '/../vendor/autoload.php';
+if (is_file($__mongo_autoload)) {
+    require_once $__mongo_autoload;
+}
 
 use MongoDB\Client;
 use MongoDB\Database;
@@ -66,6 +72,13 @@ function mongo_client(): Client
         return $client;
     }
 
+    if (!class_exists(Client::class)) {
+        throw new RuntimeException(
+            'Dependències de MongoDB no instal·lades (falta vendor/autoload.php). ' .
+            'Si estàs en docker, reconstrueix/arrenca amb: docker compose up -d --build'
+        );
+    }
+
     $mongoUri = mongodb_uri();
 
     // Server API (recomanat per Atlas). Compatible amb SRV: mongodb+srv://...
@@ -84,6 +97,12 @@ function mongo_client(): Client
 
 function mongo_db(): Database
 {
+    if (!class_exists(Database::class)) {
+        throw new RuntimeException(
+            'Dependències de MongoDB no instal·lades (falta vendor/autoload.php).'
+        );
+    }
+
     $dbName = mongodb_db_name_from_uri(mongodb_uri());
 
     return mongo_client()->selectDatabase($dbName);
