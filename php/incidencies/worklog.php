@@ -3,7 +3,7 @@
 
 $incident_id = (int)($_GET['incident_id'] ?? $_POST['incident_id'] ?? 0);
 if ($incident_id <= 0) {
-    header('Location: /php/incidencies/llistar.php');
+    header('Location: /incidencies/llistar.php');
     exit;
 }
 
@@ -14,5 +14,5 @@ if ($tecnic !== '') {
     $params['tecnic'] = $tecnic;
 }
 
-header('Location: /php/incidencies/detall_incidencia.php?' . http_build_query($params));
+header('Location: /incidencies/detall_incidencia.php?' . http_build_query($params));
 exit;

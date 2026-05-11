@@ -24,13 +24,17 @@ if ($id <= 0) {
 
 $alert = null;
 
+$is_tecnic_view = ($tecnic_hint !== '');
+
 // Handle Work Log POST before any HTML output (PRG).
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string)($_POST['action'] ?? '');
     if ($action === 'add_worklog') {
-        $opened_at = trim((string)($_POST['opened_at'] ?? ''));
         $hours_raw = trim((string)($_POST['hours_spent'] ?? ''));
         $description = trim((string)($_POST['description'] ?? ''));
+
+        $visible_to_user_raw = (string)($_POST['visible_to_user'] ?? '0');
+        $visible_to_user = ($visible_to_user_raw === '1') ? 1 : 0;
 
         if ($hours_raw === '' || !is_numeric($hours_raw)) {
             $alert = ['type' => 'danger', 'message' => "Introdueix les hores (número)."];
@@ -53,16 +57,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $hours_value = round($hours_value, 2);
 
-                $opened_at_value = $opened_at !== '' ? $opened_at : date('Y-m-d H:i:s');
-                if (!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $opened_at_value)) {
-                    $opened_at_value = date('Y-m-d H:i:s');
-                }
+                // Timestamp is always set by the server (not user-controlled).
+                $opened_at_value = date('Y-m-d H:i:s');
 
-                $stmtWL = $conn->prepare('INSERT INTO worklogs (incident_id, opened_at, user, hours_spent, description) VALUES (?, ?, ?, ?, ?)');
+                $stmtWL = $conn->prepare('INSERT INTO worklogs (incident_id, opened_at, user, hours_spent, description, visible_to_user) VALUES (?, ?, ?, ?, ?, ?)');
                 if ($stmtWL === false) {
                     throw new RuntimeException('Error preparant la inserció: ' . $conn->error);
                 }
-                $stmtWL->bind_param('issds', $id, $opened_at_value, $user, $hours_value, $description);
+                $stmtWL->bind_param('issdsi', $id, $opened_at_value, $user, $hours_value, $description, $visible_to_user);
                 if (!$stmtWL->execute()) {
                     $stmtWL->close();
                     throw new RuntimeException('Error desant el Work Log: ' . $conn->error);
@@ -122,7 +124,12 @@ if (!$inc) {
 // Carregar worklogs des de MySQL
 $worklogs = [];
 try {
-    $stmtList = $conn->prepare('SELECT opened_at, user, hours_spent, description FROM worklogs WHERE incident_id = ? ORDER BY opened_at DESC, created_at DESC');
+    $worklog_where = 'incident_id = ?';
+    if (!$is_tecnic_view) {
+        $worklog_where .= ' AND visible_to_user = 1';
+    }
+
+    $stmtList = $conn->prepare('SELECT opened_at, user, hours_spent, description, visible_to_user FROM worklogs WHERE ' . $worklog_where . ' ORDER BY opened_at DESC, created_at DESC');
     if ($stmtList !== false) {
         $stmtList->bind_param('i', $id);
         if ($stmtList->execute()) {
@@ -158,7 +165,7 @@ if ($tecnic_hint !== '') {
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4 mb-0">Incidència #<?php echo htmlspecialchars((string)$inc['id']); ?></h1>
         <div>
-            <a href="/php/incidencies/llistar.php" class="btn btn-sm btn-outline-secondary ms-2">Tornar</a>
+            <a href="/incidencies/llistar.php" class="btn btn-sm btn-outline-secondary ms-2">Tornar</a>
         </div>
     </div>
 
@@ -202,28 +209,50 @@ if ($tecnic_hint !== '') {
     <?php if ($tab === 'add') : ?>
         <div class="card mb-4">
             <div class="card-body">
-                <form method="POST" class="row g-3">
+                <form method="POST" class="card card-body">
                     <input type="hidden" name="action" value="add_worklog">
-                    <input type="hidden" name="opened_at" value="<?php echo htmlspecialchars($opened_at, ENT_QUOTES); ?>">
 
-                    <div class="col-md-6">
+                    <p class="text-muted mb-3">Registra una actuació parcial (no cal que tanquis tota la incidència). La data s'assigna automàticament.</p>
+
+                    <div class="mb-3">
                         <label class="form-label">Data i hora</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($opened_at, ENT_QUOTES); ?>" readonly>
+                        <div class="form-control" aria-readonly="true" readonly>
+                            <?php echo htmlspecialchars($opened_at, ENT_QUOTES); ?>
+                        </div>
+                        <div class="form-text">Es guarda automàticament quan envies el formulari.</div>
                     </div>
-                    <div class="col-md-6">
+
+                    <div class="mb-3">
                         <label class="form-label">Usuari</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars((string)$user_display, ENT_QUOTES); ?>" readonly>
+                        <div class="form-control" aria-readonly="true" readonly>
+                            <?php echo htmlspecialchars((string)$user_display, ENT_QUOTES); ?>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Hores</label>
-                        <input type="number" name="hours_spent" class="form-control" min="0" step="0.25" required autofocus>
+
+                    <div class="mb-3">
+                        <label class="form-label">Visibilitat del missatge</label>
+                        <div class="btn-group" role="group" aria-label="Visibilitat">
+                            <input type="radio" class="btn-check" name="visible_to_user" id="visible_yes" value="1">
+                            <label class="btn btn-outline-success" for="visible_yes">Visible per l'usuari</label>
+
+                            <input type="radio" class="btn-check" name="visible_to_user" id="visible_no" value="0" checked>
+                            <label class="btn btn-outline-secondary" for="visible_no">Només tècnics</label>
+                        </div>
+                        <div class="form-text">Si marques "Només tècnics", el missatge no es mostrarà a usuaris normals.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Temps invertit (hores)</label>
+                        <input type="number" name="hours_spent" class="form-control" min="0" step="0.25" required autofocus placeholder="Ex: 0.5">
                         <div class="form-text">Ex: 0.5, 1, 1.25</div>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label">Descripció del treball</label>
-                        <textarea name="description" class="form-control" rows="4" required placeholder="Què has fet?"></textarea>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descripció del treball realitzat</label>
+                        <textarea name="description" class="form-control" rows="4" required placeholder="Descriu què has fet..."></textarea>
                     </div>
-                    <div class="col-12 d-flex justify-content-end">
+
+                    <div class="d-flex justify-content-end">
                         <button type="submit" class="btn btn-primary">Guardar</button>
                     </div>
                 </form>
@@ -238,12 +267,18 @@ if ($tecnic_hint !== '') {
         <?php else : ?>
             <div class="list-group mb-4">
                 <?php foreach ($worklogs as $w) : ?>
+                    <?php
+                    $is_visible = ((int)($w['visible_to_user'] ?? 0)) === 1;
+                    $vis_label = $is_visible ? 'Visible' : 'Només tècnics';
+                    $vis_class = $is_visible ? 'bg-success' : 'bg-secondary';
+                    ?>
                     <div class="list-group-item">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1"><?php echo htmlspecialchars((string)($w['user'] ?? '')); ?></h6>
                             <small class="text-muted"><?php echo htmlspecialchars((string)($w['opened_at'] ?? '')); ?></small>
                         </div>
                         <p class="mb-1"><strong>Temps:</strong> <?php echo htmlspecialchars((string)($w['hours_spent'] ?? '')); ?></p>
+                        <p class="mb-1"><span class="badge <?php echo $vis_class; ?>"><?php echo htmlspecialchars($vis_label); ?></span></p>
                         <p class="mb-0 text-muted"><?php echo nl2br(htmlspecialchars((string)($w['description'] ?? ''))); ?></p>
                     </div>
                 <?php endforeach; ?>

@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS incidencies (
   departament VARCHAR(80) NOT NULL,
   data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   descripcio_curta VARCHAR(255) NOT NULL,
+  descripcio_llarga TEXT NULL,
   localitzacio ENUM(
     'P1_A1','P1_A2','P1_A3','P1_A4','P1_A5','P1_A6','P1_A7','P1_A8','P1_A9','P1_A10',
     'P2_A1','P2_A2','P2_A3','P2_A4','P2_A5','P2_A6','P2_A7','P2_A8','P2_A9','P2_A10',
@@ -63,6 +64,7 @@ CREATE TABLE IF NOT EXISTS worklogs (
   user VARCHAR(255) NULL,
   hours_spent DECIMAL(6,2) NOT NULL DEFAULT 0,
   description TEXT NOT NULL,
+  visible_to_user TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_worklogs_incident (incident_id),
   INDEX idx_worklogs_created (created_at)

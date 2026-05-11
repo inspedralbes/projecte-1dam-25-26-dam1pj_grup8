@@ -219,7 +219,7 @@ function render_table_tecnic(array $rows, bool $show_actions, array $filters): v
         if ($tecnic_qs !== '') {
             $detail_params['tecnic'] = $tecnic_qs;
         }
-        $id_link = "<a href='/php/incidencies/detall_incidencia.php?" . htmlspecialchars(http_build_query($detail_params), ENT_QUOTES) . "' class='text-decoration-none'>" . htmlspecialchars((string)$id) . "</a>";
+        $id_link = "<a href='/incidencies/detall_incidencia.php?" . htmlspecialchars(http_build_query($detail_params), ENT_QUOTES) . "' class='text-decoration-none'>" . htmlspecialchars((string)$id) . "</a>";
         echo "<th scope='row'>$id_link</th>";
         echo "<td>$dep</td>";
         echo "<td>$desc</td>";
@@ -233,7 +233,7 @@ function render_table_tecnic(array $rows, bool $show_actions, array $filters): v
             echo "<td>";
 
             // Work Log button
-            echo "<a href='/php/incidencies/detall_incidencia.php?" . htmlspecialchars(http_build_query($detail_params), ENT_QUOTES) . "' class='btn btn-sm btn-outline-info me-2'>Work Log</a>";
+            echo "<a href='/incidencies/detall_incidencia.php?" . htmlspecialchars(http_build_query($detail_params), ENT_QUOTES) . "' class='btn btn-sm btn-outline-info me-2'>Work Log</a>";
 
             if ($inici_tasca === '') {
                 echo "<form method='POST' class='d-inline me-2'>";
@@ -485,8 +485,18 @@ if ($schema_ok) {
 <link rel="stylesheet" href="/css/tecnic.css">
 
 <div class="container py-4">
-    <h1 class="h3 mb-2">Tècnic</h1>
-    <p class="text-muted mb-4">Només es mostren les incidències assignades al tècnic seleccionat i el seu historial.</p>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+            <h1 class="h3 mb-2">Tècnic</h1>
+            <p class="text-muted mb-4">Només es mostren les incidències assignades al tècnic seleccionat i el seu historial.</p>
+        </div>
+
+        <div class="mb-4">
+            <a class="btn btn-outline-secondary" href="/tecnic/informe_tecnic.php?<?php echo htmlspecialchars(http_build_query(['tecnic' => $tecnic_actual]), ENT_QUOTES); ?>">
+                Informe
+            </a>
+        </div>
+    </div>
 
     <div class="card card-body mb-4">
         <form method="GET" class="row g-2 align-items-end">

@@ -107,6 +107,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 			id INT AUTO_INCREMENT PRIMARY KEY,
 			departament VARCHAR(80) NOT NULL,
 			descripcio_curta VARCHAR(255) NOT NULL,
+			descripcio_llarga TEXT NULL,
 			localitzacio ENUM($localitzacions_sql) NULL,
 			prioritat VARCHAR(10) NOT NULL DEFAULT '" . INCIDENCIA_PRIORITAT_MITJA . "',
 			tipologia VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_TIPOLOGIA_HARDWARE . "',
@@ -130,6 +131,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 	$required_columns = [
 		'departament' => "ALTER TABLE incidencies ADD COLUMN departament VARCHAR(80) NOT NULL",
 		'descripcio_curta' => "ALTER TABLE incidencies ADD COLUMN descripcio_curta VARCHAR(255) NOT NULL",
+		'descripcio_llarga' => "ALTER TABLE incidencies ADD COLUMN descripcio_llarga TEXT NULL AFTER descripcio_curta",
 		'localitzacio' => "ALTER TABLE incidencies ADD COLUMN localitzacio ENUM($localitzacions_sql) NULL AFTER descripcio_curta",
 		'prioritat' => "ALTER TABLE incidencies ADD COLUMN prioritat VARCHAR(10) NOT NULL DEFAULT '" . INCIDENCIA_PRIORITAT_MITJA . "'",
 		'tipologia' => "ALTER TABLE incidencies ADD COLUMN tipologia VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_TIPOLOGIA_HARDWARE . "'",
@@ -161,6 +163,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 			user VARCHAR(255) NULL,
 			hours_spent DECIMAL(6,2) NOT NULL DEFAULT 0,
 			description TEXT NOT NULL,
+			visible_to_user TINYINT(1) NOT NULL DEFAULT 0,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			INDEX idx_worklogs_incident (incident_id),
 			INDEX idx_worklogs_created (created_at)
@@ -180,6 +183,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 		'user' => "ALTER TABLE worklogs ADD COLUMN user VARCHAR(255) NULL",
 		'hours_spent' => "ALTER TABLE worklogs ADD COLUMN hours_spent DECIMAL(6,2) NOT NULL DEFAULT 0",
 		'description' => "ALTER TABLE worklogs ADD COLUMN description TEXT NOT NULL",
+		'visible_to_user' => "ALTER TABLE worklogs ADD COLUMN visible_to_user TINYINT(1) NOT NULL DEFAULT 0",
 		'created_at' => "ALTER TABLE worklogs ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
 	];
 

@@ -352,12 +352,6 @@ if ($schema_ok) {
                 </button>
             </div>
 
-            <div class="col-12">
-                <a id="statsLink" class="btn btn-outline-secondary btn-sm" href="admin_stats.php?inicio=&fin=&usuario=&pagina=" target="_blank" rel="noopener">
-                    Veure JSON d'estadístiques
-                </a>
-            </div>
-
         </div>
     </div>
 
@@ -378,6 +372,12 @@ if ($schema_ok) {
     <div class="tab-content" id="adminStatsTabsContent">
         <!-- LOGS TAB -->
         <div class="tab-pane fade show active" id="logs" role="tabpanel" aria-labelledby="logs-tab" tabindex="0">
+            <div class="d-flex justify-content-end mb-3">
+                <a id="statsLink" class="btn btn-outline-secondary btn-sm" href="admin_stats.php?inicio=&fin=&usuario=&pagina=" target="_blank" rel="noopener">
+                    Veure JSON d'estadístiques
+                </a>
+            </div>
+
             <!-- RESUM -->
             <div class="row g-4 mb-4">
 

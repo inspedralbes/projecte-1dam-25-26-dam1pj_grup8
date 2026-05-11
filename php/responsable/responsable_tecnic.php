@@ -304,7 +304,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         if ($tecnic_raw !== '') {
             $detail_params['tecnic'] = $tecnic_raw;
         }
-        $id_link = "<a href='/php/incidencies/detall_incidencia.php?" . htmlspecialchars(http_build_query($detail_params), ENT_QUOTES) . "' class='text-decoration-none'>" . htmlspecialchars((string)$id) . "</a>";
+        $id_link = "<a href='/incidencies/detall_incidencia.php?" . htmlspecialchars(http_build_query($detail_params), ENT_QUOTES) . "' class='text-decoration-none'>" . htmlspecialchars((string)$id) . "</a>";
 
         echo "<tr>";
         echo "<th scope='row'>{$id_link}</th>";
