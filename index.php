@@ -1,7 +1,7 @@
 <?php $bodyClass = 'home-page'; ?>
 <?php include 'header.php'; ?>
 
-<?php $bgImage = "img/header.webp"; ?>
+<?php $bgImage = "img/header.png"; ?>
 
 <header class="hero-header" style="background-image: url('<?php echo $bgImage; ?>');">
     <div class="hero-overlay"></div>
