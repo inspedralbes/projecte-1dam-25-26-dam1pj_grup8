@@ -6,6 +6,8 @@ body {
 body {
     display: flex;
     flex-direction: column;
+    background: url('/php/img/header.png') no-repeat center top fixed;
+    background-size: cover;
 }
 
 .site-footer {
