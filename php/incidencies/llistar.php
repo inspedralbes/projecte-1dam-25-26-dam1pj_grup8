@@ -1,8 +1,11 @@
 <?php
 
-require_once 'connexio.php';
-require_once 'incidencies_schema.php';
-require_once 'header.php';
+require_once __DIR__ . '/auth.php';
+auth_require_login();
+
+require_once __DIR__ . '/connexio.php';
+require_once __DIR__ . '/incidencies_schema.php';
+require_once __DIR__ . '/header.php';
 
 // Assegurar que l'esquema existeix
 $schema_result = ensure_incidencies_schema($conn);

@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/auth.php';
+auth_require_role(['TECNIC', 'RESPONSABLE', 'ADMIN']);
+
 require_once __DIR__ . '/connexio.php';
 require_once __DIR__ . '/incidencies_schema.php';
 

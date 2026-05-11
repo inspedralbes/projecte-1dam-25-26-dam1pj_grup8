@@ -1,5 +1,8 @@
 <?php
 
+require_once __DIR__ . '/../incidencies/auth.php';
+auth_require_role('PROFESSOR');
+
 require_once __DIR__ . '/../incidencies/connexio.php';
 
 require_once __DIR__ . '/../incidencies/incidencies_schema.php';
@@ -13,16 +16,33 @@ function longitud(string $text): int
 	return strlen($text);
 }
 
-function departaments_disponibles(): array
+function departaments_disponibles(?mysqli $conn = null): array
 {
-	return [
-		'IT',
-		'Administració',
-		'Manteniment',
-		'Consergeria',
-		'ESO',
-		'Batxillerat',
-	];
+	if ($conn instanceof mysqli) {
+		$res = $conn->query("SHOW TABLES LIKE 'DEPARTMENT'");
+		if ($res !== false) {
+			$exists = ($res->num_rows > 0);
+			$res->free();
+			if ($exists) {
+				$names = [];
+				$res2 = $conn->query('SELECT DEPARTMENT_NAME FROM DEPARTMENT ORDER BY DEPARTMENT_NAME ASC');
+				if ($res2 !== false) {
+					while ($row = $res2->fetch_assoc()) {
+						$name = trim((string)($row['DEPARTMENT_NAME'] ?? ''));
+						if ($name !== '') {
+							$names[] = $name;
+						}
+					}
+					$res2->free();
+				}
+				if (count($names) > 0) {
+					return $names;
+				}
+			}
+		}
+	}
+
+	return ['IT', 'Administració', 'Manteniment', 'Consergeria', 'ESO', 'Batxillerat'];
 }
 
 function crear_incidencia(mysqli $conn): array
@@ -63,7 +83,7 @@ function crear_incidencia(mysqli $conn): array
 		];
 	}
 
-	$departaments_valids = departaments_disponibles();
+	$departaments_valids = departaments_disponibles($conn);
 	if (!in_array($departament, $departaments_valids, true)) {
 		return [
 			'type' => 'error',
@@ -199,7 +219,7 @@ function crear_incidencia(mysqli $conn): array
 			<label for="departament" class="form-label">Departament</label>
 			<select class="form-select" id="departament" name="departament" required>
 				<option value="" <?php echo $formulari_departament === '' ? 'selected' : ''; ?> disabled>-- Selecciona --</option>
-				<?php foreach (departaments_disponibles() as $dept) : ?>
+				<?php foreach (departaments_disponibles($conn) as $dept) : ?>
 					<option value="<?php echo htmlspecialchars($dept); ?>" <?php echo $formulari_departament === $dept ? 'selected' : ''; ?>>
 						<?php echo htmlspecialchars($dept); ?>
 					</option>

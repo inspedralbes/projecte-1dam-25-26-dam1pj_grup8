@@ -1,5 +1,8 @@
 <?php
 
+require_once __DIR__ . '/../incidencies/auth.php';
+auth_require_role('TECNIC');
+
 require_once __DIR__ . '/../incidencies/connexio.php';
 require_once __DIR__ . '/../incidencies/incidencies_schema.php';
 require_once __DIR__ . '/../incidencies/tecnic_schema.php';

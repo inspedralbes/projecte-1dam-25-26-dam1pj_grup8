@@ -1,5 +1,8 @@
 <?php
 
+require_once __DIR__ . '/../incidencies/auth.php';
+auth_require_role('ADMIN');
+
 // Show the "Crear Usuari" button in the header for this page.
 $showCrearUsuariButton = true;
 $showUsuarisButton = true;
@@ -208,10 +211,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
             $alert = ['type' => 'warning', 'message' => implode(' ', $errors)];
         } else {
             $has_password_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'PASSWORD') : false;
+            $has_password_hash_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'PASSWORD_HASH') : false;
+            $has_username_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'USERNAME') : false;
             $has_phone_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'PHONE_NUMBER') : false;
             $has_department_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'DEPARTMENT_ID') : false;
 
-            if ($has_password_col && $has_department_col) {
+            // If auth fields exist, we can create a proper account without hardcoded credentials.
+            // We generate a random password hash (user should reset via future functionality).
+            $generated_username = '';
+            $generated_hash = '';
+            if ($has_username_col) {
+                $base = preg_replace('/[^a-zA-Z]/', '', (string)strtok($email, '@'));
+                $base = $base !== '' ? strtolower($base) : 'user';
+                $generated_username = substr($base, 0, 18) . (string)random_int(10, 99);
+            }
+            if ($has_password_hash_col) {
+                $generated_hash = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+            }
+
+            if ($has_username_col && $has_password_hash_col && $has_password_col && $has_department_col) {
+                $stmt = $conn->prepare('INSERT INTO USUARI (USERNAME, FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PASSWORD_HASH, PHONE_NUMBER, DEPARTMENT_ID, ROLE, IS_VERIFIED) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            } elseif ($has_username_col && $has_password_hash_col && $has_password_col) {
+                $stmt = $conn->prepare('INSERT INTO USUARI (USERNAME, FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PASSWORD_HASH, PHONE_NUMBER, ROLE, IS_VERIFIED) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            } elseif ($has_username_col && $has_password_hash_col && $has_department_col) {
+                $stmt = $conn->prepare('INSERT INTO USUARI (USERNAME, FIRST_NAME, LAST_NAME, EMAIL, PASSWORD_HASH, PHONE_NUMBER, DEPARTMENT_ID, ROLE, IS_VERIFIED) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            } elseif ($has_username_col && $has_password_hash_col) {
+                $stmt = $conn->prepare('INSERT INTO USUARI (USERNAME, FIRST_NAME, LAST_NAME, EMAIL, PASSWORD_HASH, PHONE_NUMBER, ROLE, IS_VERIFIED) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            } elseif ($has_password_col && $has_department_col) {
                 $stmt = $conn->prepare('INSERT INTO USUARI (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, DEPARTMENT_ID, ROLE) VALUES (?, ?, ?, ?, ?, ?, ?)');
             } elseif ($has_password_col) {
                 $stmt = $conn->prepare('INSERT INTO USUARI (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROLE) VALUES (?, ?, ?, ?, ?, ?)');
@@ -224,13 +250,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
             } else {
                 $phone_value = ($phone !== '') ? $phone : ($has_phone_col ? '000000000' : '');
 
-                if ($has_password_col && $has_department_col) {
-                    $password_value = 'demo';
+                if ($has_username_col && $has_password_hash_col && $has_password_col && $has_department_col) {
+                    $dept_id = function_exists('ensure_default_department_id') ? ensure_default_department_id($conn) : null;
+                    $dept_id = is_int($dept_id) ? $dept_id : 1;
+                    $is_verified = 1;
+                    $legacy_password = bin2hex(random_bytes(12));
+                    $stmt->bind_param('sssssssisi', $generated_username, $first_name, $last_name, $email, $legacy_password, $generated_hash, $phone_value, $dept_id, $role, $is_verified);
+                } elseif ($has_username_col && $has_password_hash_col && $has_password_col) {
+                    $is_verified = 1;
+                    $legacy_password = bin2hex(random_bytes(12));
+                    $stmt->bind_param('ssssssssi', $generated_username, $first_name, $last_name, $email, $legacy_password, $generated_hash, $phone_value, $role, $is_verified);
+                } elseif ($has_username_col && $has_password_hash_col && $has_department_col) {
+                    $dept_id = function_exists('ensure_default_department_id') ? ensure_default_department_id($conn) : null;
+                    $dept_id = is_int($dept_id) ? $dept_id : 1;
+                    $is_verified = 1;
+                    $stmt->bind_param('ssssssisi', $generated_username, $first_name, $last_name, $email, $generated_hash, $phone_value, $dept_id, $role, $is_verified);
+                } elseif ($has_username_col && $has_password_hash_col) {
+                    $is_verified = 1;
+                    $stmt->bind_param('sssssssi', $generated_username, $first_name, $last_name, $email, $generated_hash, $phone_value, $role, $is_verified);
+                } elseif ($has_password_col && $has_department_col) {
+                    $password_value = bin2hex(random_bytes(8));
                     $dept_id = function_exists('ensure_default_department_id') ? ensure_default_department_id($conn) : null;
                     $dept_id = is_int($dept_id) ? $dept_id : 1;
                     $stmt->bind_param('sssssis', $first_name, $last_name, $email, $password_value, $phone_value, $dept_id, $role);
                 } elseif ($has_password_col) {
-                    $password_value = 'demo';
+                    $password_value = bin2hex(random_bytes(8));
                     $stmt->bind_param('ssssss', $first_name, $last_name, $email, $password_value, $phone_value, $role);
                 } else {
                     $stmt->bind_param('sssss', $first_name, $last_name, $email, $phone_value, $role);
@@ -261,7 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
                                     if (!$exists) {
                                         $insert_tecnic = $conn->prepare("INSERT INTO TECNIC (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROL_EMPLOYEE) VALUES (?, ?, ?, ?, ?, ?)");
                                         if ($insert_tecnic !== false) {
-                                            $password = 'demo';
+                                            $password = bin2hex(random_bytes(8));
                                             $phone_tecnic = ($phone !== '') ? $phone : '000000000';
                                             $insert_tecnic->bind_param('ssssss', $first_name, $last_name, $email, $password, $phone_tecnic, $rol_employee);
                                             $insert_tecnic->execute();
