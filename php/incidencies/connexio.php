@@ -10,12 +10,13 @@
 // - Dins Docker Compose: el host és el servei `db` i la BBDD és `persones`.
 // - Fora de Docker: manté els valors actuals.
 
-$isDocker = file_exists('/.dockerenv');
+// Evitar warning en entorns amb `open_basedir` restringit
+$isDocker = @file_exists('/.dockerenv');
 
-$servername = 'db';
-$username = 'usuari' ;
-$password = 'paraula_de_pas' ;
-$dbname = 'persones';
+$servername = 'localhost';
+$username = ' a25asipozdor_usuari_inc' ;
+$password = 'P@ssw0rd' ;
+$dbname = ' a25asipozdor_incidencies';
 
 // Quan ja tingueu un codi una mica depurat, i vulgueu fer la gestió dels errors
 // vosaltres mateixos heu de desactivar el comportament predeterminat de mysqli 
@@ -24,6 +25,15 @@ $dbname = 'persones';
 // Amb la següent línia, el codi en cas d'error de mysql ja no aboratarà i ho podreu
 // gestionar vosaltres mateixos.
 // mysqli_report(MYSQLI_REPORT_OFF);
+
+// Evitar que mysqli llanci excepcions i aborti el procés; gestionarem l'error manualment
+mysqli_report(MYSQLI_REPORT_OFF);
+
+// Eliminem espais accidentals en les credencials per evitar noms amb prefixos d'espai
+$servername = trim($servername);
+$username = trim($username);
+$password = trim($password);
+$dbname = trim($dbname);
 
 // Crear la connexió
 $conn = new mysqli($servername, $username, $password, $dbname);
