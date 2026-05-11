@@ -55,6 +55,20 @@ CREATE TABLE IF NOT EXISTS incidencies (
 );
 
 
+-- Taula de Work Logs (per afegir entrades de treball a una incidència)
+CREATE TABLE IF NOT EXISTS worklogs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  incident_id INT NOT NULL,
+  opened_at DATETIME NOT NULL,
+  user VARCHAR(255) NULL,
+  hours_spent DECIMAL(6,2) NOT NULL DEFAULT 0,
+  description TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_worklogs_incident (incident_id),
+  INDEX idx_worklogs_created (created_at)
+);
+
+
 -- Taula de tècnics (mateixa estructura base que USUARI, però amb ROL_EMPLOYEE)
 CREATE TABLE IF NOT EXISTS TECNIC (
   TECNIC_ID INT NOT NULL AUTO_INCREMENT,

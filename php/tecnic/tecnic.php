@@ -214,7 +214,13 @@ function render_table_tecnic(array $rows, bool $show_actions, array $filters): v
         $tancament = (string)($row['data_tancament'] ?? '');
 
         echo "<tr>";
-        echo "<th scope='row'>$id</th>";
+        $detail_params = ['id' => (string)$id, 'tab' => 'add'];
+        $tecnic_qs = (string)($filters['tecnic'] ?? '');
+        if ($tecnic_qs !== '') {
+            $detail_params['tecnic'] = $tecnic_qs;
+        }
+        $id_link = "<a href='/php/incidencies/detall_incidencia.php?" . htmlspecialchars(http_build_query($detail_params), ENT_QUOTES) . "' class='text-decoration-none'>" . htmlspecialchars((string)$id) . "</a>";
+        echo "<th scope='row'>$id_link</th>";
         echo "<td>$dep</td>";
         echo "<td>$desc</td>";
         echo "<td>$tipo_label</td>";
@@ -225,6 +231,9 @@ function render_table_tecnic(array $rows, bool $show_actions, array $filters): v
 
         if ($show_actions) {
             echo "<td>";
+
+            // Work Log button
+            echo "<a href='/php/incidencies/detall_incidencia.php?" . htmlspecialchars(http_build_query($detail_params), ENT_QUOTES) . "' class='btn btn-sm btn-outline-info me-2'>Work Log</a>";
 
             if ($inici_tasca === '') {
                 echo "<form method='POST' class='d-inline me-2'>";

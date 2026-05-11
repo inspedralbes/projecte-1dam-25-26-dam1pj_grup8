@@ -246,7 +246,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         echo "<div class='text-muted'>No hi ha incidències per mostrar.</div>";
         return;
     }
-    //asignem valor a les variables de prioritat, tipologia i estat per mostrar-les a la taula
+
     $prio_labels = [
         INCIDENCIA_PRIORITAT_ALTA => 'Alta',
         INCIDENCIA_PRIORITAT_MITJA => 'Mitja',
@@ -263,7 +263,6 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         INCIDENCIA_TIPOLOGIA_PLATAFORMES => "Plataformes",
         INCIDENCIA_TIPOLOGIA_SEGURETAT => "Seguretat",
     ];
-
     $estat_labels = [
         INCIDENCIA_ESTAT_PENDENT_ASSIGNAR => "Pendent",
         INCIDENCIA_ESTAT_ASSIGNADA => "Assignada",
@@ -273,11 +272,12 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
 
     echo "<div class='table-responsive scrollable-list'>";
     echo "<table class='table table-sm table-striped align-middle'>";
-    echo "<thead><tr><th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Prioritat</th><th scope='col'>Tipologia</th>";
-	if ($mode === 'historial') {
-		echo "<th scope='col'>Estat</th>";
-	}
-	echo "<th scope='col'>Data</th>";
+    echo "<thead><tr>";
+    echo "<th scope='col'>ID</th><th scope='col'>Departament</th><th scope='col'>Descripció</th><th scope='col'>Prioritat</th><th scope='col'>Tipologia</th>";
+    if ($mode === 'historial') {
+        echo "<th scope='col'>Estat</th>";
+    }
+    echo "<th scope='col'>Data</th>";
     if ($mode !== 'pendent') {
         echo "<th scope='col'>Tècnic</th>";
     }
@@ -289,8 +289,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
     foreach ($rows as $row) {
         $id = (int)($row['id'] ?? 0);
         $dep = htmlspecialchars((string)($row['departament'] ?? ''));
-        $desc_raw = (string)($row['descripcio_curta'] ?? '');
-        $desc = htmlspecialchars($desc_raw);
+        $desc = htmlspecialchars((string)($row['descripcio_curta'] ?? ''));
         $prio_raw = strtolower(trim((string)($row['prioritat'] ?? INCIDENCIA_PRIORITAT_MITJA)));
         $prio_label = htmlspecialchars($prio_labels[$prio_raw] ?? 'Mitja');
         $tipo_raw = strtolower(trim((string)($row['tipologia'] ?? '')));
@@ -298,19 +297,25 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
         $estat_raw = (string)($row['estat'] ?? '');
         $estat_label = htmlspecialchars($estat_labels[$estat_raw] ?? $estat_raw);
         $data = htmlspecialchars((string)($row['data'] ?? ''));
-        $tecnic = htmlspecialchars((string)($row['tecnic_assignat'] ?? ''));
+        $tecnic_raw = (string)($row['tecnic_assignat'] ?? '');
+        $tecnic = htmlspecialchars($tecnic_raw);
+
+        $detail_params = ['id' => (string)$id, 'tab' => 'add'];
+        if ($tecnic_raw !== '') {
+            $detail_params['tecnic'] = $tecnic_raw;
+        }
+        $id_link = "<a href='/php/incidencies/detall_incidencia.php?" . htmlspecialchars(http_build_query($detail_params), ENT_QUOTES) . "' class='text-decoration-none'>" . htmlspecialchars((string)$id) . "</a>";
 
         echo "<tr>";
-        echo "<th scope='row'>$id</th>";
-        echo "<td>$dep</td>";
-        echo "<td>$desc</td>";
-        echo "<td><span class='prio-badge prio-" . htmlspecialchars($prio_raw, ENT_QUOTES) . "'>$prio_label</span></td>";
-        echo "<td>$tipo_label</td>";
-		if ($mode === 'historial') {
-			echo "<td>" . ($estat_label !== '' ? $estat_label : "<span class='text-muted'>—</span>") . "</td>";
-		}
-        echo "<td>$data</td>";
-
+        echo "<th scope='row'>{$id_link}</th>";
+        echo "<td>{$dep}</td>";
+        echo "<td>{$desc}</td>";
+        echo "<td><span class='prio-badge prio-" . htmlspecialchars($prio_raw, ENT_QUOTES) . "'>{$prio_label}</span></td>";
+        echo "<td>{$tipo_label}</td>";
+        if ($mode === 'historial') {
+            echo "<td>" . ($estat_label !== '' ? $estat_label : "<span class='text-muted'>—</span>") . "</td>";
+        }
+        echo "<td>{$data}</td>";
         if ($mode !== 'pendent') {
             echo "<td>" . ($tecnic !== '' ? $tecnic : "<span class='text-muted'>—</span>") . "</td>";
         }
@@ -335,7 +340,7 @@ function render_table_responsable(array $rows, string $mode, array $filters): vo
 
         if ($mode === 'assignada') {
             echo "<td>";
-			$prio_attr = htmlspecialchars($prio_raw, ENT_QUOTES);
+            $prio_attr = htmlspecialchars($prio_raw, ENT_QUOTES);
             echo "<button type='button' class='btn btn-sm btn-outline-secondary me-2' data-bs-toggle='modal' data-bs-target='#editarModal' data-incidencia-id='" . (int)$id . "' data-incidencia-prio='" . $prio_attr . "'>Editar</button>";
             echo "<form method='POST' class='d-inline'>";
             echo "<input type='hidden' name='sort' value='" . htmlspecialchars((string)($filters['sort'] ?? '')) . "'>";

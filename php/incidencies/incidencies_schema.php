@@ -109,7 +109,7 @@ function ensure_incidencies_schema(mysqli $conn): array
 			descripcio_curta VARCHAR(255) NOT NULL,
 			localitzacio ENUM($localitzacions_sql) NULL,
 			prioritat VARCHAR(10) NOT NULL DEFAULT '" . INCIDENCIA_PRIORITAT_MITJA . "',
-			tipologia VARCHAR(30) NOT NULL DEFAULT 'hardware',,
+			tipologia VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_TIPOLOGIA_HARDWARE . "',
 			data_incidencia TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			estat VARCHAR(30) NOT NULL DEFAULT '" . INCIDENCIA_ESTAT_PENDENT_ASSIGNAR . "',
 			tecnic_assignat VARCHAR(80) NULL,
@@ -147,6 +147,48 @@ function ensure_incidencies_schema(mysqli $conn): array
 				return [
 					'ok' => false,
 					'error' => "No s'ha pogut afegir la columna $column: " . $conn->error,
+				];
+			}
+		}
+	}
+
+	// Work Logs (MySQL) - linked to incidencies.
+	if (!taula_existeix($conn, 'worklogs')) {
+		$create_worklogs_sql = "CREATE TABLE IF NOT EXISTS worklogs (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			incident_id INT NOT NULL,
+			opened_at DATETIME NOT NULL,
+			user VARCHAR(255) NULL,
+			hours_spent DECIMAL(6,2) NOT NULL DEFAULT 0,
+			description TEXT NOT NULL,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			INDEX idx_worklogs_incident (incident_id),
+			INDEX idx_worklogs_created (created_at)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+
+		if ($conn->query($create_worklogs_sql) === false) {
+			return [
+				'ok' => false,
+				'error' => "No s'ha pogut crear la taula worklogs: " . $conn->error,
+			];
+		}
+	}
+
+	$worklogs_required_columns = [
+		'incident_id' => "ALTER TABLE worklogs ADD COLUMN incident_id INT NOT NULL",
+		'opened_at' => "ALTER TABLE worklogs ADD COLUMN opened_at DATETIME NOT NULL",
+		'user' => "ALTER TABLE worklogs ADD COLUMN user VARCHAR(255) NULL",
+		'hours_spent' => "ALTER TABLE worklogs ADD COLUMN hours_spent DECIMAL(6,2) NOT NULL DEFAULT 0",
+		'description' => "ALTER TABLE worklogs ADD COLUMN description TEXT NOT NULL",
+		'created_at' => "ALTER TABLE worklogs ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
+	];
+
+	foreach ($worklogs_required_columns as $column => $alter_sql) {
+		if (!columna_existeix($conn, 'worklogs', $column)) {
+			if ($conn->query($alter_sql) === false) {
+				return [
+					'ok' => false,
+					'error' => "No s'ha pogut afegir la columna $column a worklogs: " . $conn->error,
 				];
 			}
 		}
