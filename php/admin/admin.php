@@ -308,12 +308,13 @@ if ($schema_ok) {
     <?php endif; ?>
 
     <h1 class="mb-4 text-center fw-bold">
-        Panell d'Estadístiques d'Accessos
+        Panell d'Estadístiques
     </h1>
 
-    <!-- FILTROS -->
+    <!-- FILTROS (shared) -->
     <div class="card shadow-sm p-4 mb-4">
-        <h4 class="mb-3">Filtres</h4>
+        <h4 class="mb-1">Filtres</h4>
+        <p class="text-muted mb-3">Els filtres s'apliquen a les pestanyes de Logs i Incidències.</p>
 
         <div class="row g-3">
 
@@ -341,9 +342,8 @@ if ($schema_ok) {
             </div>
 
             <div class="col-md-8">
-                <label class="form-label">Pàgina visitada</label>
-                <input type="text" id="pagina" class="form-control"
-                    placeholder="Ex: incidencies.php">
+                <label class="form-label">Pàgina visitada <span class="text-muted">(Logs)</span></label>
+                <input type="text" id="pagina" class="form-control" placeholder="Ex: incidencies.php">
             </div>
 
             <div class="col-md-4 d-flex align-items-end">
@@ -361,101 +361,120 @@ if ($schema_ok) {
         </div>
     </div>
 
+    <!-- TABS -->
+    <ul class="nav nav-tabs mb-4" id="adminStatsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab" aria-controls="logs" aria-selected="true">
+                Logs
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="incidencies-tab" data-bs-toggle="tab" data-bs-target="#incidencies" type="button" role="tab" aria-controls="incidencies" aria-selected="false">
+                Incidències
+            </button>
+        </li>
+    </ul>
 
-    <!-- RESUM -->
-    <div class="row g-4 mb-4">
+    <div class="tab-content" id="adminStatsTabsContent">
+        <!-- LOGS TAB -->
+        <div class="tab-pane fade show active" id="logs" role="tabpanel" aria-labelledby="logs-tab" tabindex="0">
+            <!-- RESUM -->
+            <div class="row g-4 mb-4">
 
-        <div class="col-md-4">
-            <div class="stat-card">
-                <h5>Accessos totals</h5>
-                <h2 id="totalAccess">0</h2>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <h5>Accessos totals</h5>
+                        <h2 id="totalAccess">0</h2>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <h5>Pàgines visitades</h5>
+                        <h2 id="totalPages">0</h2>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <h5>Usuaris actius</h5>
+                        <h2 id="activeUsers">0</h2>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- GRAFIC (LOGS) -->
+            <div class="row g-4 mb-5">
+                <div class="col-12">
+                    <div class="chart-box">
+                        <h4>Accessos per dia</h4>
+                        <canvas id="accessTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLAS (LOGS) -->
+            <div class="row g-4">
+
+                <div class="col-md-6">
+                    <div class="table-box">
+                        <h4>Top usuaris actius</h4>
+
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Usuari</th>
+                                    <th>Accessos</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTable"></tbody>
+                        </table>
+
+                    </div>
+                </div>
+
+
+                <div class="col-md-6">
+                    <div class="table-box">
+                        <h4>Pàgines més visitades</h4>
+
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Pàgina</th>
+                                    <th>Visites</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="pagesTable"></tbody>
+
+                        </table>
+
+                    </div>
+                </div>
+
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="stat-card">
-                <h5>Pàgines visitades</h5>
-                <h2 id="totalPages">0</h2>
+        <!-- INCIDENCIES TAB -->
+        <div class="tab-pane fade" id="incidencies" role="tabpanel" aria-labelledby="incidencies-tab" tabindex="0">
+            <div class="row g-4 mb-5">
+                <div class="col-lg-5">
+                    <div class="chart-box chart-box-compact">
+                        <h4>Incidències per estat</h4>
+                        <canvas id="incidenciesStatusChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="chart-box">
+                        <h4>Tipus d'incidència i prioritat</h4>
+                        <canvas id="incidenciesTypePriorityChart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="stat-card">
-                <h5>Usuaris actius</h5>
-                <h2 id="activeUsers">0</h2>
-            </div>
-        </div>
-
-    </div>
-
-
-    <!-- GRAFICOS -->
-    <div class="row g-4 mb-5">
-
-        <div class="col-12">
-            <div class="chart-box">
-                <h4>Accessos per dia</h4>
-                <canvas id="accessTrendChart"></canvas>
-            </div>
-        </div>
-
-        <div class="col-lg-5">
-            <div class="chart-box chart-box-compact">
-                <h4>Incidències per estat</h4>
-                <canvas id="incidenciesStatusChart"></canvas>
-            </div>
-        </div>
-
-        <div class="col-lg-7">
-            <div class="chart-box">
-                <h4>Tipus d'incidència i prioritat</h4>
-                <canvas id="incidenciesTypePriorityChart"></canvas>
-            </div>
-        </div>
-
-    </div>
-
-
-    <!-- TABLAS -->
-    <div class="row g-4">
-
-        <div class="col-md-6">
-            <div class="table-box">
-                <h4>Top usuaris actius</h4>
-
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Usuari</th>
-                            <th>Accessos</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTable"></tbody>
-                </table>
-
-            </div>
-        </div>
-
-
-        <div class="col-md-6">
-            <div class="table-box">
-                <h4>Pàgines més visitades</h4>
-
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Pàgina</th>
-                            <th>Visites</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="pagesTable"></tbody>
-
-                </table>
-
-            </div>
-        </div>
-
     </div>
 
 </div>

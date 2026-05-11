@@ -188,3 +188,30 @@ legend:{position:'bottom'}
 
 
 window.onload=cargarStats;
+
+// When charts are created inside hidden tab panes, Chart.js may size them to 0.
+// Resize on tab activation so the user sees them correctly.
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(function (tabBtn) {
+    tabBtn.addEventListener('shown.bs.tab', function (event) {
+      const target = (event && event.target && event.target.getAttribute)
+        ? event.target.getAttribute('data-bs-target')
+        : null;
+
+      if (target === '#logs') {
+        if (accessTrendChart && typeof accessTrendChart.resize === 'function') {
+          accessTrendChart.resize();
+        }
+      }
+
+      if (target === '#incidencies') {
+        if (incidenciesStatusChart && typeof incidenciesStatusChart.resize === 'function') {
+          incidenciesStatusChart.resize();
+        }
+        if (incidenciesTypePriorityChart && typeof incidenciesTypePriorityChart.resize === 'function') {
+          incidenciesTypePriorityChart.resize();
+        }
+      }
+    });
+  });
+});
