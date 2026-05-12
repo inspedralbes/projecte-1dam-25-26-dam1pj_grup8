@@ -17,44 +17,39 @@ if (!is_array($schema_result) || ($schema_result['ok'] ?? false) !== true) {
 $search_id = trim((string)($_POST['search_id'] ?? ''));
 $search_departament = trim((string)($_POST['search_departament'] ?? ''));
 $resultats = null;
-$filter_applied = false;
+$filter_applied = true;
 
-// Si s'ha enviat el formulari, fer la búsqueda
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	$filter_applied = true;
-	
-	if ($search_id !== '' || $search_departament !== '') {
-		$sql = "SELECT id, departament, descripcio_curta, localitzacio, email, data_incidencia, estat, prioritat FROM incidencies WHERE 1=1";
-		$params = [];
-		$types = "";
+$current_user = auth_user();
+$current_user_email = trim((string)($current_user['email'] ?? ''));
+if ($current_user_email === '') {
+	die('No s\'ha pogut determinar el correu de l\'usuari autenticat.');
+}
 
-		if ($search_id !== '') {
-			$sql .= " AND id = ?";
-			$params[] = (int) $search_id;
-			$types .= "i";
-		}
+// Mostrar sempre les incidències del professor autenticat i aplicar-hi filtres opcionals.
+$sql = "SELECT id, departament, descripcio_curta, localitzacio, email, data_incidencia, estat, prioritat FROM incidencies WHERE email = ?";
+$params = [$current_user_email];
+$types = 's';
 
-		if ($search_departament !== '') {
-			$sql .= " AND departament = ?";
-			$params[] = $search_departament;
-			$types .= "s";
-		}
+if ($search_id !== '') {
+	$sql .= " AND id = ?";
+	$params[] = (int) $search_id;
+	$types .= 'i';
+}
 
-		$sql .= " ORDER BY data_incidencia DESC";
+if ($search_departament !== '') {
+	$sql .= " AND departament = ?";
+	$params[] = $search_departament;
+	$types .= 's';
+}
 
-		$stmt = $conn->prepare($sql);
-		if ($stmt !== false && !empty($params)) {
-			$stmt->bind_param($types, ...$params);
-			$stmt->execute();
-			$resultats = $stmt->get_result();
-			$stmt->close();
-		} elseif ($stmt !== false) {
-			$resultats = $stmt->execute() ? $stmt->get_result() : null;
-			$stmt->close();
-		}
-	} else {
-		$resultats = $conn->query("SELECT id, departament, descripcio_curta, localitzacio, email, data_incidencia, estat, prioritat FROM incidencies ORDER BY data_incidencia DESC LIMIT 0");
-	}
+$sql .= " ORDER BY data_incidencia DESC";
+
+$stmt = $conn->prepare($sql);
+if ($stmt !== false) {
+	$stmt->bind_param($types, ...$params);
+	$stmt->execute();
+	$resultats = $stmt->get_result();
+	$stmt->close();
 }
 
 ?>
