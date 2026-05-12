@@ -62,13 +62,23 @@ function password_is_valid(string $p, string $p2, array &$errors): bool
     return count($errors) === 0;
 }
 
-
+$departments = [];
+if ($schema_ok && taula_existeix($conn, 'DEPARTMENT')) {
+    $res = $conn->query('SELECT DEPARTMENT_ID, DEPARTMENT_NAME FROM DEPARTMENT ORDER BY DEPARTMENT_NAME ASC');
+    if ($res !== false) {
+        while ($row = $res->fetch_assoc()) {
+            $departments[] = $row;
+        }
+        $res->free();
+    }
+}
 
 $username = trim((string)($_POST['username'] ?? ''));
 $email = trim((string)($_POST['email'] ?? ''));
 $email2 = trim((string)($_POST['email_confirm'] ?? ''));
 $password = (string)($_POST['password'] ?? '');
 $password2 = (string)($_POST['password_confirm'] ?? '');
+$department_id = (int)($_POST['department_id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors = [];
@@ -90,6 +100,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     password_is_valid($password, $password2, $errors);
+
+    if ($department_id <= 0) {
+        $errors[] = 'Department is required.';
+    } else {
+        $stmtDept = $conn->prepare('SELECT DEPARTMENT_ID FROM DEPARTMENT WHERE DEPARTMENT_ID = ? LIMIT 1');
+        if ($stmtDept !== false) {
+            $stmtDept->bind_param('i', $department_id);
+            if ($stmtDept->execute()) {
+                $resD = $stmtDept->get_result();
+                $exists = ($resD !== false && $resD->num_rows > 0);
+                if ($resD !== false) {
+                    $resD->free();
+                }
+                if (!$exists) {
+                    $errors[] = 'Department is not valid.';
+                }
+            }
+            $stmtDept->close();
+        }
+    }
 
     // DB uniqueness checks (case-insensitive)
     if (count($errors) === 0) {
@@ -142,9 +172,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $has_password_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'PASSWORD') : false;
         if ($has_password_col) {
-            $stmt = $conn->prepare('INSERT INTO USUARI (USERNAME, FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PASSWORD_HASH, PHONE_NUMBER, ROLE, IS_VERIFIED, VERIFICATION_TOKEN, TOKEN_EXPIRES_AT) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt = $conn->prepare('INSERT INTO USUARI (USERNAME, FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PASSWORD_HASH, PHONE_NUMBER, DEPARTMENT_ID, ROLE, IS_VERIFIED, VERIFICATION_TOKEN, TOKEN_EXPIRES_AT) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         } else {
-            $stmt = $conn->prepare('INSERT INTO USUARI (USERNAME, FIRST_NAME, LAST_NAME, EMAIL, PASSWORD_HASH, PHONE_NUMBER, ROLE, IS_VERIFIED, VERIFICATION_TOKEN, TOKEN_EXPIRES_AT) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt = $conn->prepare('INSERT INTO USUARI (USERNAME, FIRST_NAME, LAST_NAME, EMAIL, PASSWORD_HASH, PHONE_NUMBER, DEPARTMENT_ID, ROLE, IS_VERIFIED, VERIFICATION_TOKEN, TOKEN_EXPIRES_AT) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         }
         if ($stmt === false) {
             $alert = ['type' => 'danger', 'message' => 'Database error: ' . $conn->error];
@@ -153,9 +183,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Legacy schemas may have USUARI.PASSWORD as CHAR(25) NOT NULL.
                 // Use a short random placeholder (24 hex chars) to satisfy the constraint.
                 $legacy_password = bin2hex(random_bytes(12));
-                $stmt->bind_param('sssssssissss', $username, $first_name, $last_name, $email_lower, $legacy_password, $hash, $phone, $role, $is_verified, $token, $expires_at);
+                $stmt->bind_param('sssssssisiss', $username, $first_name, $last_name, $email_lower, $legacy_password, $hash, $phone, $department_id, $role, $is_verified, $token, $expires_at);
             } else {
-                $stmt->bind_param('ssssssissss', $username, $first_name, $last_name, $email_lower, $hash, $phone, $role, $is_verified, $token, $expires_at);
+                $stmt->bind_param('ssssssisiss', $username, $first_name, $last_name, $email_lower, $hash, $phone, $department_id, $role, $is_verified, $token, $expires_at);
             }
             $ok = $stmt->execute();
             $stmt->close();
@@ -203,6 +233,20 @@ include __DIR__ . '/../incidencies/header.php';
                 <div class="small" id="emailFeedback"></div>
             </div>
 
+            <div class="mb-3">
+                <label class="form-label" for="department_id">Department</label>
+                <select class="form-select" id="department_id" name="department_id" required>
+                    <option value="">Select a department…</option>
+                    <?php foreach ($departments as $dept) : ?>
+                        <?php
+                        $id = (int)($dept['DEPARTMENT_ID'] ?? 0);
+                        $name = (string)($dept['DEPARTMENT_NAME'] ?? '');
+                        $selected = ($id === $department_id) ? 'selected' : '';
+                        ?>
+                        <option value="<?php echo $id; ?>" <?php echo $selected; ?>><?php echo h($name); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
             <div class="mb-3">
                 <label class="form-label" for="password">Password</label>
