@@ -94,12 +94,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $schema_ok) {
     $id = (int)($_POST['id'] ?? 0);
 
     if ($action === 'iniciar' && $id > 0) {
-        $stmt = $conn->prepare('UPDATE incidencies SET data_inici_tasca = NOW() WHERE id = ? AND estat = ? AND tecnic_assignat = ? AND data_inici_tasca IS NULL');
+        $start_date_raw = trim((string)($_POST['start_date'] ?? ''));
+        $use_custom = $start_date_raw !== '';
+
+        if ($use_custom) {
+            try {
+                $dt = new DateTime(str_replace('T', ' ', $start_date_raw));
+                $start_date = $dt->format('Y-m-d H:i:s');
+            } catch (Throwable $e) {
+                $start_date = '';
+            }
+        } else {
+            $start_date = '';
+        }
+
+        if ($start_date !== '') {
+            $stmt = $conn->prepare('UPDATE incidencies SET data_inici_tasca = ? WHERE id = ? AND estat = ? AND tecnic_assignat = ? AND data_inici_tasca IS NULL');
+        } else {
+            $stmt = $conn->prepare('UPDATE incidencies SET data_inici_tasca = NOW() WHERE id = ? AND estat = ? AND tecnic_assignat = ? AND data_inici_tasca IS NULL');
+        }
+
         if ($stmt === false) {
             $alert = ['type' => 'danger', 'message' => 'Error preparant la consulta: ' . $conn->error];
         } else {
             $estat_assignada = INCIDENCIA_ESTAT_ASSIGNADA;
-            $stmt->bind_param('iss', $id, $estat_assignada, $tecnic_actual);
+            if ($start_date !== '') {
+                $stmt->bind_param('siss', $start_date, $id, $estat_assignada, $tecnic_actual);
+            } else {
+                $stmt->bind_param('iss', $id, $estat_assignada, $tecnic_actual);
+            }
             if ($stmt->execute() && $stmt->affected_rows > 0) {
                 $alert = ['type' => 'success', 'message' => "Tasca iniciada per la incidència #$id."];
             } else {
@@ -247,7 +270,9 @@ function render_table_tecnic(array $rows, bool $show_actions, array $filters): v
                 echo "<input type='hidden' name='tecnic' value='" . htmlspecialchars((string)($filters['tecnic'] ?? '')) . "'>";
                 echo "<input type='hidden' name='action' value='iniciar'>";
                 echo "<input type='hidden' name='id' value='" . (int)$id . "'>";
-                echo "<button type='submit' class='btn btn-sm btn-outline-primary'>Iniciar</button>";
+                echo "<input type='datetime-local' name='start_date' class='form-control form-control-sm d-none me-2' placeholder='Data d\'inici'>";
+                echo "<button type='button' class='btn btn-sm btn-outline-primary btn-iniciar'>Iniciar</button>";
+                echo "<button type='submit' class='btn btn-sm btn-primary d-none btn-confirm'>Confirma</button>";
                 echo "</form>";
             } else {
                 echo "<span class='text-muted me-2'>Iniciada</span>";
@@ -486,6 +511,24 @@ if ($schema_ok) {
 <?php include __DIR__ . '/../incidencies/header.php'; ?>
 
 <link rel="stylesheet" href="/css/tecnic.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.btn-iniciar').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            var form = btn.closest('form');
+            if (!form) return;
+            var input = form.querySelector('input[name="start_date"]');
+            var confirmBtn = form.querySelector('.btn-confirm');
+            if (!input || !confirmBtn) return;
+            input.classList.remove('d-none');
+            confirmBtn.classList.remove('d-none');
+            btn.classList.add('d-none');
+            input.focus();
+        });
+    });
+});
+</script>
 
 <div class="container py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">

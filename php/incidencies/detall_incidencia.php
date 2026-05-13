@@ -73,6 +73,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new RuntimeException('Error desant el Work Log: ' . $conn->error);
                 }
                 $stmtWL->close();
+                // Si el worklog és visible per l'usuari, tanquem la incidència automàticament
+                if ($visible_to_user === 1) {
+                    try {
+                        $stmtClose = $conn->prepare('UPDATE incidencies SET estat = ?, tecnic_assignat = NULL, data_inici_tasca = NULL, data_tancament = NOW() WHERE id = ?');
+                        if ($stmtClose !== false) {
+                            $estat_tancada = INCIDENCIA_ESTAT_TANCADA;
+                            $stmtClose->bind_param('si', $estat_tancada, $id);
+                            $stmtClose->execute();
+                            $stmtClose->close();
+                        }
+                    } catch (Throwable $e) {
+                        // no tallar l'execució; mostrar alert posterior
+                        $alert = $alert ?? ['type' => 'warning', 'message' => 'Work Log desat però no s\'ha pogut tancar la incidència automàticament.'];
+                    }
+                }
 
                 $redirect_params = ['id' => (string)$id, 'tab' => 'historial'];
                 if ($tecnic_hint !== '') {

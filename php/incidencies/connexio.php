@@ -13,10 +13,12 @@
 // Evitar warning en entorns amb `open_basedir` restringit
 $isDocker = @file_exists('/.dockerenv');
 
-$servername = 'localhost';
-$username = ' a25asipozdor_usuari_inc' ;
-$password = 'P@ssw0rd' ;
-$dbname = ' a25asipozdor_incidencies';
+// Permetre configurar via variables d'entorn (recomanat en Docker)
+$servername = getenv('MYSQL_HOST') ?: ($isDocker ? 'db' : 'localhost');
+$username = getenv('MYSQL_USER') ?: ($isDocker ? 'usuari' : 'a25asipozdor_usuari_inc');
+$password = getenv('MYSQL_PASSWORD') ?: ($isDocker ? 'paraula_de_pas' : 'P@ssw0rd');
+$dbname = getenv('MYSQL_DATABASE') ?: ($isDocker ? 'persones' : 'a25asipozdor_incidencies');
+$port = (int) (getenv('MYSQL_PORT') ?: 3306);
 
 // Quan ja tingueu un codi una mica depurat, i vulgueu fer la gestió dels errors
 // vosaltres mateixos heu de desactivar el comportament predeterminat de mysqli 
@@ -36,7 +38,7 @@ $password = trim($password);
 $dbname = trim($dbname);
 
 // Crear la connexió
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($servername, $username, $password, $dbname, $port);
 
 // Comprovar la connexió
 if ($conn->connect_error) {
