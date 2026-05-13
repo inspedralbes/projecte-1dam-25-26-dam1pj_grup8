@@ -1,4 +1,13 @@
 <?php
+/**
+ * Sistema de login de usuarios.
+ *
+ * Este archivo se encarga de:
+ * - Autenticación de usuario (usuario/email + contraseña)
+ * - Inicialización de sesión
+ * - Validación de datos del formulario
+ * - Redirección después del login
+ */
 
 require_once __DIR__ . '/../incidencies/connexio.php';
 require_once __DIR__ . '/../incidencies/usuari_schema.php';
@@ -11,16 +20,31 @@ $schema_ok = (is_array($schema_result) && ($schema_result['ok'] ?? false) === tr
 
 $alert = null;
 
+/**
+ * Escapa texto para evitar ataques XSS al mostrar HTML.
+ *
+ * @param string $v Texto de entrada
+ * @return string Texto seguro para HTML
+ */
 function h(string $v): string
 {
     return htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * URL de redirección después del login.
+ * Solo se permiten rutas internas que empiecen por "/".
+ *
+ * @var string
+ */
 $next = trim((string)($_GET['next'] ?? $_POST['next'] ?? ''));
 if ($next === '' || !str_starts_with($next, '/')) {
     $next = '';
 }
 
+/**
+ * Datos recibidos del formulario de login.
+ */
 $identifier = trim((string)($_POST['identifier'] ?? ''));
 $password = (string)($_POST['password'] ?? '');
 
@@ -30,17 +54,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$schema_ok) {
         $errors[] = "Database schema isn't ready.";
     }
-
+     // Validación de campos obligatorios
     if ($identifier === '') {
         $errors[] = 'Username or Email is required.';
     }
     if ($password === '') {
         $errors[] = 'Password is required.';
     }
-
+    // Si hay errores, se muestran sin consultar la base de datos
     if (count($errors) > 0) {
         $alert = ['type' => 'danger', 'message' => implode(' ', $errors)];
     } else {
+        /**
+         * Consulta para buscar usuario por username o email
+         * (comparación insensible a mayúsculas/minúsculas)
+         */
         $stmt = $conn->prepare('SELECT * FROM USUARI WHERE LOWER(USERNAME) = LOWER(?) OR LOWER(EMAIL) = LOWER(?) LIMIT 1');
         if ($stmt === false) {
             $alert = ['type' => 'danger', 'message' => 'Database error: ' . $conn->error];
@@ -48,6 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ident_lower = strtolower($identifier);
             $stmt->bind_param('ss', $ident_lower, $ident_lower);
             $user = null;
+             /**
+             * Ejecución de la consulta y obtención del usuario
+             */
             if ($stmt->execute()) {
                 $res = $stmt->get_result();
                 if ($res !== false) {
@@ -59,14 +90,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $generic_error = 'Invalid username or password.';
 
-            if (!is_array($user)) {
+            if (!is_array($user)) { // Si no se encuentra usuario
                 $alert = ['type' => 'danger', 'message' => $generic_error];
             } else {
+                 /**
+                 * Verificación de la contraseña con hash almacenado
+                 */
                 $hash = (string)($user['PASSWORD_HASH'] ?? '');
                 if ($hash === '' || !password_verify($password, $hash)) {
                     $alert = ['type' => 'danger', 'message' => $generic_error];
                 } else {
+                     /**
+                     * Autenticación correcta del usuario
+                     */
                     $is_verified = (int)($user['IS_VERIFIED'] ?? 0) === 1;
+                    /**
+                     * Guardar usuario en sesión
+                     */
                     auth_login($user);
                     $redirect = $next !== '' ? $next : auth_post_login_redirect();
                     if (!$is_verified) {
@@ -81,6 +121,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 include __DIR__ . '/../incidencies/header.php';
+/**
+ * Vista de login de usuario.
+ *
+ * Esta sección muestra el formulario de inicio de sesión,
+ * así como los posibles mensajes de error o estado del sistema.
+ */
 ?>
 
 <div class="container py-5" style="max-width: 640px;">
@@ -120,6 +166,12 @@ include __DIR__ . '/../incidencies/header.php';
 </div>
 
 <script>
+/**
+ * Script para mostrar u ocultar la contraseña.
+ *
+ * Cambia el tipo del input entre "password" y "text"
+ * y actualiza el texto del botón.
+ */
 (function() {
     const pass = document.getElementById('password');
     const toggle = document.getElementById('togglePassword');

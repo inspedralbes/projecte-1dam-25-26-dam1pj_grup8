@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Verificación de correo electrónico de usuario.
+ *
+ * Este archivo se encarga de:
+ * - Validar el token de verificación recibido por URL
+ * - Comprobar si el token existe y es válido
+ * - Verificar si el token ha expirado
+ * - Marcar el usuario como verificado en la base de datos
+ */
+
 require_once __DIR__ . '/../incidencies/connexio.php';
 require_once __DIR__ . '/../incidencies/usuari_schema.php';
 require_once __DIR__ . '/../incidencies/auth.php';
@@ -12,25 +22,39 @@ $schema_ok = (is_array($schema_result) && ($schema_result['ok'] ?? false) === tr
 $token = trim((string)($_GET['token'] ?? ''));
 $alert = null;
 
+/**
+ * Escapa texto para salida HTML segura.
+ *
+ * @param string $v
+ * @return string
+ */
 function h(string $v): string
 {
     return htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
-
+/**
+ * Validaciones iniciales antes de procesar el token.
+ */
 if (!$schema_ok) {
     $alert = ['type' => 'danger', 'message' => "Database schema isn't ready."];
 } elseif ($token === '') {
     $alert = ['type' => 'warning', 'message' => 'Missing token.'];
 } else {
+    /**
+     * Buscar usuario asociado al token de verificación
+     */
     $stmt = $conn->prepare('SELECT USUARI_ID, TOKEN_EXPIRES_AT FROM USUARI WHERE VERIFICATION_TOKEN = ? LIMIT 1');
     if ($stmt === false) {
         $alert = ['type' => 'danger', 'message' => 'Database error: ' . $conn->error];
     } else {
         $stmt->bind_param('s', $token);
         $row = null;
+        /**
+         * Ejecución de consulta
+         */
         if ($stmt->execute()) {
             $res = $stmt->get_result();
-            if ($res !== false) {
+            if ($res !== false) { //validacion token
                 $row = $res->fetch_assoc() ?: null;
                 $res->free();
             }

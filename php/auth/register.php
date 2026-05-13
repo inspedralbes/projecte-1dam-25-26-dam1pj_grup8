@@ -1,4 +1,15 @@
 <?php
+/**
+ * Sistema de registro de usuarios.
+ *
+ * Este archivo gestiona:
+ * - Validación datos formulario de registro
+ * - Comprobación de  (usuario/email)
+ * - Validación de contraseña 
+ * - Inserción de usuario en bd
+ * - Carga de departamentos
+ * - Validaciones en frontend (JS)
+ */
 
 require_once __DIR__ . '/../incidencies/connexio.php';
 require_once __DIR__ . '/../incidencies/usuari_schema.php';
@@ -12,11 +23,31 @@ $schema_ok = (is_array($schema_result) && ($schema_result['ok'] ?? false) === tr
 $alert = null;
 $success = false;
 
+/**
+ * Escapa texto para salida HTML segura.
+ *
+ * @param string $v
+ * @return string
+ */
+
 function h(string $v): string
 {
     return htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * Valida el nombre de usuario.
+ *
+ * Reglas:
+ * - Obligatorio
+ * - Solo letras (a-z, A-Z)
+ * - Sin espacios ni números
+ * - Longitud entre 3 y 20 caracteres
+ *
+ * @param string $u
+ * @param array $errors Referencia donde se añaden errores
+ * @return bool
+ */
 function username_is_valid(string $u, array &$errors): bool
 {
     $u = trim($u);
@@ -43,6 +74,19 @@ function username_is_valid(string $u, array &$errors): bool
     return count($errors) === 0;
 }
 
+/**
+ * Valida la contraseña.
+ *
+ * Reglas:
+ * - Obligatorio
+ * - Mínimo 8 caracteres
+ * - Incluir mayúscula, minúscula, número y carácter especial
+ *
+ * @param string $p
+ * @param string $p2
+ * @param array $errors Referencia donde se añaden errores
+ * @return bool
+ */
 function password_is_valid(string $p, string $p2, array &$errors): bool
 {
     if ($p === '') {
@@ -61,7 +105,7 @@ function password_is_valid(string $p, string $p2, array &$errors): bool
 
     return count($errors) === 0;
 }
-
+//carpa de departamentos
 $departments = [];
 if ($schema_ok && taula_existeix($conn, 'DEPARTMENT')) {
     $res = $conn->query('SELECT DEPARTMENT_ID, DEPARTMENT_NAME FROM DEPARTMENT ORDER BY DEPARTMENT_NAME ASC');
@@ -73,6 +117,9 @@ if ($schema_ok && taula_existeix($conn, 'DEPARTMENT')) {
     }
 }
 
+/**
+ * Datos del formulario de registro.
+ */
 $username = trim((string)($_POST['username'] ?? ''));
 $email = trim((string)($_POST['email'] ?? ''));
 $email2 = trim((string)($_POST['email_confirm'] ?? ''));
@@ -80,6 +127,7 @@ $password = (string)($_POST['password'] ?? '');
 $password2 = (string)($_POST['password_confirm'] ?? '');
 $department_id = (int)($_POST['department_id'] ?? 0);
 
+//validaciones
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors = [];
 
@@ -121,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // DB uniqueness checks (case-insensitive)
+    // comprobacion user y mail sean unicos
     if (count($errors) === 0) {
         $stmtU = $conn->prepare('SELECT USUARI_ID FROM USUARI WHERE LOWER(USERNAME) = LOWER(?) LIMIT 1');
         if ($stmtU !== false) {
@@ -154,7 +202,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtE->close();
         }
     }
-
+     /**
+     * Inserción del usuario si no hay errores
+     */
     if (count($errors) > 0) {
         $alert = ['type' => 'danger', 'message' => implode(' ', $errors)];
     } else {
@@ -163,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $token = bin2hex(random_bytes(32));
         $expires_at = (new DateTime('+24 hours'))->format('Y-m-d H:i:s');
 
-        // FIRST_NAME/LAST_NAME exist in this project; we keep a sensible default without adding extra fields.
+        // datos por defecto del usuario
         $first_name = $username;
         $last_name = '';
         $phone = '';
@@ -180,8 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $alert = ['type' => 'danger', 'message' => 'Database error: ' . $conn->error];
         } else {
             if ($has_password_col) {
-                // Legacy schemas may have USUARI.PASSWORD as CHAR(25) NOT NULL.
-                // Use a short random placeholder (24 hex chars) to satisfy the constraint.
+                
                 $legacy_password = bin2hex(random_bytes(12));
                 $stmt->bind_param('sssssssisiss', $username, $first_name, $last_name, $email_lower, $legacy_password, $hash, $phone, $department_id, $role, $is_verified, $token, $expires_at);
             } else {
@@ -279,7 +328,20 @@ include __DIR__ . '/../incidencies/header.php';
 </div>
 
 <script>
+    /**
+ * Script de validación en tiempo real del formulario de registro.
+ *
+ * Este script se encarga de:
+ * - Validar username, email y contraseña en el frontend
+ * - Mostrar mensajes de feedback al usuario
+ * - Verificar coincidencia de emails y contraseñas
+ * - Evaluar la fuerza de la contraseña
+ * - Permitir mostrar/ocultar contraseña
+ */
 (function() {
+     /**
+     * Elementos del formulario
+     */
     const username = document.getElementById('username');
     const usernameFeedback = document.getElementById('usernameFeedback');
 
@@ -294,12 +356,27 @@ include __DIR__ . '/../incidencies/header.php';
 
     const toggle = document.getElementById('togglePassword');
 
+    /**
+     * Muestra texto en un elemento con estilo de éxito o error
+     *
+     * @param {HTMLElement} el Elemento destino
+     * @param {string} text Mensaje a mostrar
+     * @param {boolean} ok Indica si es válido o no
+     */
     function setText(el, text, ok) {
         if (!el) return;
         el.textContent = text;
         el.className = ok ? 'small text-success' : 'small text-danger';
     }
-
+    /**
+     * Valida el username en tiempo real
+     *
+     * Reglas:
+     * - No espacios
+     * - No números
+     * - Solo letras
+     * - Longitud entre 3 y 20 caracteres
+     */
     function validateUsername() {
         const v = (username.value || '').trim();
         if (!v) return setText(usernameFeedback, '', true);
@@ -311,6 +388,9 @@ include __DIR__ . '/../incidencies/header.php';
         return setText(usernameFeedback, 'Looks good.', true);
     }
 
+      /**
+     * Valida que los emails coincidan correctamente
+     */
     function validateEmails() {
         const a = (email.value || '').trim();
         const b = (email2.value || '').trim();
@@ -319,7 +399,12 @@ include __DIR__ . '/../incidencies/header.php';
         if (a.toLowerCase() !== b.toLowerCase()) return setText(emailFeedback, "Emails don't match.", false);
         return setText(emailFeedback, 'Emails match.', true);
     }
-
+        /**
+     * Calcula una puntuación de seguridad de la contraseña
+     *
+     * @param {string} p Contraseña
+     * @returns {number} Puntuación de 0 a 5
+     */
     function passwordScore(p) {
         let score = 0;
         if (p.length >= 8) score++;
@@ -330,6 +415,9 @@ include __DIR__ . '/../incidencies/header.php';
         return score;
     }
 
+    /**
+     * Valida la fuerza de la contraseña
+     */ 
     function validatePassword() {
         const p = pass.value || '';
         if (!p) return setText(strength, '', true);
@@ -347,7 +435,9 @@ include __DIR__ . '/../incidencies/header.php';
         if (a !== b) return setText(match, "Passwords don't match.", false);
         return setText(match, 'Passwords match.', true);
     }
-
+    /**
+     * Eventos de validación en tiempo real
+     */
     if (username) {
         username.addEventListener('input', validateUsername);
         validateUsername();
@@ -363,7 +453,9 @@ include __DIR__ . '/../incidencies/header.php';
         validatePassword();
         validatePasswordMatch();
     }
-
+    /**
+     * Mostrar / ocultar contraseña
+     */
     if (toggle && pass) {
         toggle.addEventListener('click', function() {
             const isPwd = pass.type === 'password';
