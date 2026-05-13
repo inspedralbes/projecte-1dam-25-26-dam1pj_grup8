@@ -71,7 +71,7 @@ Verificació ràpida:
 ## CI/CD de producció (GitHub Actions, només si NO s'elimina `.github`)
 
 El desplegament automàtic queda configurat amb GitHub Actions a `.github/workflows/deploy-prod.yml`.
-
+git p
 Secrets necessaris a GitHub:
 - `PROD_SSH_HOST`
 - `PROD_SSH_USER`
