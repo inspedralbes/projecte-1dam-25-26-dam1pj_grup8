@@ -3,7 +3,9 @@
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('ADMIN');
 
-$showCrearUsuariButton = true;
+// Ocultem el botó 'Crear Usuari' del header perquè la creació es faci
+// des del modal o des del llistat d'usuaris
+$showCrearUsuariButton = false;
 $showUsuarisButton = true;
 
 include __DIR__ . '/../incidencies/header.php';
@@ -24,6 +26,24 @@ if (!is_array($schema_result) || ($schema_result['ok'] ?? false) !== true) {
 
 
 $allowed_roles = ['TECNIC', 'ADMIN', 'RESPONSABLE', 'PROFESSOR'];
+
+if (!function_exists('format_datetime_local')) {
+    function format_datetime_local($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        $raw = trim((string)$value);
+        if ($raw === '') {
+            return '';
+        }
+        $ts = strtotime($raw);
+        if ($ts === false) {
+            return '';
+        }
+        return date('Y-m-d\TH:i', $ts);
+    }
+}
 /**
  * Carrega els tècnics disponibles
  * per omplir el selector de filtres.
@@ -49,6 +69,38 @@ $usuaris_rows = [];
 $selected_usuari = null;
 $open_usuari_detail_modal = false;
 $has_created_at_col = $schema_ok ? columna_existeix($conn, 'USUARI', 'CREATED_AT') : false;
+// Detectem columnes opcionals per al formulari d'edició
+$has_username_col = $schema_ok ? columna_existeix($conn, 'USUARI', 'USERNAME') : false;
+$has_department_col = $schema_ok ? columna_existeix($conn, 'USUARI', 'DEPARTMENT_ID') : false;
+$has_is_verified_col = $schema_ok ? columna_existeix($conn, 'USUARI', 'IS_VERIFIED') : false;
+
+// Metadades de columnes (per renderitzar/validar l'edició completa)
+$usuari_columns = [];
+if ($schema_ok) {
+    $res_cols = $conn->query('SHOW COLUMNS FROM USUARI');
+    if ($res_cols !== false) {
+        while ($c = $res_cols->fetch_assoc()) {
+            if (!is_array($c) || !isset($c['Field'])) {
+                continue;
+            }
+            $field = (string)$c['Field'];
+            $usuari_columns[$field] = $c;
+        }
+        $res_cols->free();
+    }
+}
+
+// Carreguem departaments si existeix la columna
+$departments = [];
+if ($has_department_col) {
+    $res_dept = $conn->query('SELECT DEPARTMENT_ID, DEPARTMENT_NAME FROM DEPARTMENT ORDER BY DEPARTMENT_NAME');
+    if ($res_dept !== false) {
+        while ($drow = $res_dept->fetch_assoc()) {
+            $departments[] = $drow;
+        }
+        $res_dept->free();
+    }
+}
 /**
  * Gestiona les accions principals rebudes
  * des dels formularis del panell.
@@ -84,51 +136,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
      */
     if ($action === 'update_usuari') {
         $usuari_id = (int)($_POST['usuari_id'] ?? 0);
-        $first_name_u = trim((string)($_POST['first_name'] ?? ''));
-        $last_name_u = trim((string)($_POST['last_name'] ?? ''));
-        $email_u = trim((string)($_POST['email'] ?? ''));
-        $phone_u = trim((string)($_POST['phone'] ?? ''));
-        $role_u = strtoupper(trim((string)($_POST['role'] ?? '')));
+        $fields_u = $_POST['fields'] ?? [];
+        if (!is_array($fields_u)) {
+            $fields_u = [];
+        }
+
+        // Camps habituals per validacions/sincronització (si existeixen)
+        $first_name_u = trim((string)($fields_u['FIRST_NAME'] ?? ''));
+        $last_name_u = trim((string)($fields_u['LAST_NAME'] ?? ''));
+        $email_u = trim((string)($fields_u['EMAIL'] ?? ''));
+        $phone_u = trim((string)($fields_u['PHONE_NUMBER'] ?? ''));
+        $role_u = strtoupper(trim((string)($fields_u['ROLE'] ?? '')));
         //valida les dades del form abans de guardar-les
         $errors_u = [];
         if ($usuari_id <= 0) {
             $errors_u[] = 'Usuari invàlid.';
         }
-        if ($first_name_u === '') {
-            $errors_u[] = 'El nom és obligatori.';
+        if (array_key_exists('EMAIL', $fields_u)) {
+            if ($email_u === '') {
+                $errors_u[] = "L'email és obligatori.";
+            } elseif (filter_var($email_u, FILTER_VALIDATE_EMAIL) === false) {
+                $errors_u[] = "L'email no és vàlid.";
+            }
         }
-        if ($last_name_u === '') {
-            $errors_u[] = 'Els cognoms són obligatoris.';
-        }
-        if ($email_u === '') {
-            $errors_u[] = "L'email és obligatori.";
-        } elseif (filter_var($email_u, FILTER_VALIDATE_EMAIL) === false) {
-            $errors_u[] = "L'email no és vàlid.";
-        }
-        if (!in_array($role_u, $allowed_roles, true)) {
-            $errors_u[] = 'Rol invàlid.';
+        if (array_key_exists('ROLE', $fields_u)) {
+            if (!in_array($role_u, $allowed_roles, true)) {
+                $errors_u[] = 'Rol invàlid.';
+            }
         }
 
         if (count($errors_u) > 0) {
             $alert = ['type' => 'warning', 'message' => implode(' ', $errors_u)];
         } else {
-            $has_phone_col_u = columna_existeix($conn, 'USUARI', 'PHONE_NUMBER');
-            $phone_value_u = ($phone_u !== '') ? $phone_u : '000000000';
+            $ok = true;
 
-            if ($has_phone_col_u) {
-                $stmt = $conn->prepare('UPDATE USUARI SET FIRST_NAME = ?, LAST_NAME = ?, EMAIL = ?, PHONE_NUMBER = ?, ROLE = ? WHERE USUARI_ID = ?');
-                if ($stmt !== false) {
-                    $stmt->bind_param('sssssi', $first_name_u, $last_name_u, $email_u, $phone_value_u, $role_u, $usuari_id);
-                    $ok = $stmt->execute();
-                    $stmt->close();
-                } else {
-                    $ok = false;
+            // Guardem cada camp que vingui del formulari, però només si és una columna real de USUARI.
+            foreach ($fields_u as $col => $raw_val) {
+                $col = (string)$col;
+                if ($col === 'USUARI_ID') {
+                    continue;
                 }
-            } else {
-                $stmt = $conn->prepare('UPDATE USUARI SET FIRST_NAME = ?, LAST_NAME = ?, EMAIL = ?, ROLE = ? WHERE USUARI_ID = ?');
+                if (!isset($usuari_columns[$col])) {
+                    continue;
+                }
+
+                $meta = $usuari_columns[$col];
+                $type = strtolower((string)($meta['Type'] ?? ''));
+                $nullable = ((string)($meta['Null'] ?? 'YES')) === 'YES';
+
+                // Normalització de valors
+                $val = is_string($raw_val) ? trim($raw_val) : $raw_val;
+
+                // Ajustos per camps especials
+                if ($col === 'ROLE') {
+                    $val = strtoupper(trim((string)$val));
+                }
+
+                if ($col === 'IS_VERIFIED') {
+                    $val = (int)$val;
+                }
+
+                // Converteix datetime-local a format SQL (YYYY-mm-dd HH:ii:00)
+                if (in_array($col, ['TOKEN_EXPIRES_AT', 'CREATED_AT', 'UPDATED_AT'], true)) {
+                    $v = trim((string)$val);
+                    if ($v !== '' && str_contains($v, 'T')) {
+                        $val = str_replace('T', ' ', $v) . ':00';
+                    } else {
+                        $val = $v;
+                    }
+                }
+
+                // NULL handling
+                $is_empty = ($val === '' || $val === null);
+                if ($is_empty && $nullable) {
+                    $stmt = $conn->prepare('UPDATE USUARI SET `' . $col . '` = NULL WHERE USUARI_ID = ?');
+                    if ($stmt !== false) {
+                        $stmt->bind_param('i', $usuari_id);
+                        $ok = $ok && $stmt->execute();
+                        $stmt->close();
+                    } else {
+                        $ok = false;
+                    }
+                    continue;
+                }
+
+                // Tipus de binding
+                $bind_type = 's';
+                if (preg_match('/^(tinyint|smallint|mediumint|int|bigint)\b/', $type) === 1) {
+                    $bind_type = 'i';
+                    $val = (int)$val;
+                }
+
+                $stmt = $conn->prepare('UPDATE USUARI SET `' . $col . '` = ? WHERE USUARI_ID = ?');
                 if ($stmt !== false) {
-                    $stmt->bind_param('ssssi', $first_name_u, $last_name_u, $email_u, $role_u, $usuari_id);
-                    $ok = $stmt->execute();
+                    $stmt->bind_param($bind_type . 'i', $val, $usuari_id);
+                    $ok = $ok && $stmt->execute();
                     $stmt->close();
                 } else {
                     $ok = false;
@@ -157,6 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
                                 if ($exists) {
                                     $upd = $conn->prepare('UPDATE TECNIC SET FIRST_NAME = ?, LAST_NAME = ?, PHONE_NUMBER = ?, ROL_EMPLOYEE = ? WHERE EMAIL = ?');
                                     if ($upd !== false) {
+                                        $phone_value_u = ($phone_u !== '') ? $phone_u : '000000000';
                                         $upd->bind_param('sssss', $first_name_u, $last_name_u, $phone_value_u, $rol_employee, $email_u);
                                         $upd->execute();
                                         $upd->close();
@@ -164,6 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
                                 } else {
                                     $ins = $conn->prepare('INSERT INTO TECNIC (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROL_EMPLOYEE) VALUES (?, ?, ?, ?, ?, ?)');
                                     if ($ins !== false) {
+                                        $phone_value_u = ($phone_u !== '') ? $phone_u : '000000000';
                                         $pwd = 'demo';
                                         $ins->bind_param('ssssss', $first_name_u, $last_name_u, $email_u, $pwd, $phone_value_u, $rol_employee);
                                         $ins->execute();
@@ -628,7 +732,7 @@ if ($schema_ok) {
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tancar"></button>
                 </div>
 
-                <div class="modal-body">
+                <div class="modal-body" style="max-height: calc(100vh - 220px); overflow-y: auto;">
                     <?php if (!is_array($selected_usuari)) : ?>
                         <p class="text-muted mb-0">Selecciona un usuari des del llistat.</p>
                     <?php else : ?>
@@ -647,37 +751,85 @@ if ($schema_ok) {
                         </div>
 
                         <h6 class="mb-2">Editar</h6>
-                        <p class="text-muted">Pots editar alguns camps bàsics.</p>
+                        <p class="text-muted">Pots editar tots els camps de l'usuari. Si un camp és nullable i el deixes buit, es desarà com a NULL.</p>
 
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="edit_first_name">Nom</label>
-                                <input type="text" class="form-control" id="edit_first_name" name="first_name" required value="<?php echo htmlspecialchars((string)($selected_usuari['FIRST_NAME'] ?? '')); ?>">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="edit_last_name">Cognoms</label>
-                                <input type="text" class="form-control" id="edit_last_name" name="last_name" required value="<?php echo htmlspecialchars((string)($selected_usuari['LAST_NAME'] ?? '')); ?>">
-                            </div>
+                            <?php foreach ($usuari_columns as $col => $meta) : ?>
+                                <?php
+                                $col = (string)$col;
+                                if ($col === 'USUARI_ID') {
+                                    continue;
+                                }
+                                $val = $selected_usuari[$col] ?? null;
+                                $type = strtolower((string)($meta['Type'] ?? ''));
+                                $nullable = ((string)($meta['Null'] ?? 'YES')) === 'YES';
+                                $input_id = 'edit_' . strtolower($col);
+                                $col_class = 'col-md-6';
+                                if (in_array($col, ['PASSWORD_HASH', 'VERIFICATION_TOKEN', 'PASSWORD'], true)) {
+                                    $col_class = 'col-12';
+                                }
+                                if ($col === 'EMAIL') {
+                                    $col_class = 'col-md-8';
+                                }
+                                if ($col === 'USERNAME') {
+                                    $col_class = 'col-md-4';
+                                }
+                                if ($col === 'PHONE_NUMBER') {
+                                    $col_class = 'col-md-4';
+                                }
+                                if ($col === 'ROLE') {
+                                    $col_class = 'col-md-6';
+                                }
+                                if ($col === 'DEPARTMENT_ID') {
+                                    $col_class = 'col-md-6';
+                                }
+                                if ($col === 'IS_VERIFIED') {
+                                    $col_class = 'col-md-6 d-flex align-items-center';
+                                }
+                                if (in_array($col, ['TOKEN_EXPIRES_AT', 'CREATED_AT', 'UPDATED_AT'], true)) {
+                                    $col_class = 'col-md-6';
+                                }
+                                ?>
 
-                            <div class="col-md-8">
-                                <label class="form-label" for="edit_email">Email</label>
-                                <input type="email" class="form-control" id="edit_email" name="email" required value="<?php echo htmlspecialchars((string)($selected_usuari['EMAIL'] ?? '')); ?>">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="edit_phone">Telèfon</label>
-                                <input type="text" class="form-control" id="edit_phone" name="phone" value="<?php echo htmlspecialchars((string)($selected_usuari['PHONE_NUMBER'] ?? '')); ?>">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label" for="edit_role">Rol</label>
-                                <select class="form-select" id="edit_role" name="role" required>
-                                    <?php foreach ($allowed_roles as $r) : ?>
-                                        <option value="<?php echo htmlspecialchars((string)$r); ?>" <?php echo ((string)($selected_usuari['ROLE'] ?? '') === (string)$r) ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars((string)$r); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+                                <div class="<?php echo $col_class; ?>">
+                                    <?php if ($col === 'IS_VERIFIED') : ?>
+                                        <input type="hidden" name="fields[IS_VERIFIED]" value="0">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="<?php echo htmlspecialchars($input_id); ?>" name="fields[IS_VERIFIED]" value="1" <?php echo ((int)($val ?? 0) === 1) ? 'checked' : ''; ?>>
+                                            <label class="form-check-label" for="<?php echo htmlspecialchars($input_id); ?>">Verificat</label>
+                                        </div>
+                                    <?php elseif ($col === 'ROLE') : ?>
+                                        <label class="form-label" for="<?php echo htmlspecialchars($input_id); ?>">Rol<?php echo $nullable ? '' : ' *'; ?></label>
+                                        <select class="form-select" id="<?php echo htmlspecialchars($input_id); ?>" name="fields[ROLE]">
+                                            <?php foreach ($allowed_roles as $r) : ?>
+                                                <option value="<?php echo htmlspecialchars((string)$r); ?>" <?php echo ((string)($val ?? '') === (string)$r) ? 'selected' : ''; ?>><?php echo htmlspecialchars((string)$r); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    <?php elseif ($col === 'DEPARTMENT_ID' && $has_department_col && count($departments) > 0) : ?>
+                                        <label class="form-label" for="<?php echo htmlspecialchars($input_id); ?>">Departament<?php echo $nullable ? '' : ' *'; ?></label>
+                                        <select class="form-select" id="<?php echo htmlspecialchars($input_id); ?>" name="fields[DEPARTMENT_ID]">
+                                            <option value="" <?php echo ((string)($val ?? '') === '') ? 'selected' : ''; ?>>-- Cap --</option>
+                                            <?php foreach ($departments as $d) : ?>
+                                                <option value="<?php echo htmlspecialchars((string)($d['DEPARTMENT_ID'] ?? '')); ?>" <?php echo ((string)($val ?? '') === (string)($d['DEPARTMENT_ID'] ?? '')) ? 'selected' : ''; ?>><?php echo htmlspecialchars((string)($d['DEPARTMENT_NAME'] ?? '')); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    <?php elseif (in_array($col, ['TOKEN_EXPIRES_AT', 'CREATED_AT', 'UPDATED_AT'], true)) : ?>
+                                        <label class="form-label" for="<?php echo htmlspecialchars($input_id); ?>"><?php echo htmlspecialchars($col); ?><?php echo $nullable ? '' : ' *'; ?></label>
+                                        <input type="datetime-local" class="form-control" id="<?php echo htmlspecialchars($input_id); ?>" name="fields[<?php echo htmlspecialchars($col); ?>]" value="<?php echo htmlspecialchars(format_datetime_local($val)); ?>">
+                                    <?php else : ?>
+                                        <?php
+                                        $input_type = 'text';
+                                        if ($col === 'EMAIL') {
+                                            $input_type = 'email';
+                                        } elseif (preg_match('/^(tinyint|smallint|mediumint|int|bigint)\b/', $type) === 1) {
+                                            $input_type = 'number';
+                                        }
+                                        ?>
+                                        <label class="form-label" for="<?php echo htmlspecialchars($input_id); ?>"><?php echo htmlspecialchars($col); ?><?php echo $nullable ? '' : ' *'; ?></label>
+                                        <input type="<?php echo htmlspecialchars($input_type); ?>" class="form-control" id="<?php echo htmlspecialchars($input_id); ?>" name="fields[<?php echo htmlspecialchars($col); ?>]" value="<?php echo htmlspecialchars($val === null ? '' : (string)$val); ?>" autocomplete="off">
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
                 </div>
