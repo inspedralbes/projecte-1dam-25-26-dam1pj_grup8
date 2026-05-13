@@ -22,8 +22,77 @@ use MongoDB\Client;
 use MongoDB\Database;
 use MongoDB\Driver\ServerApi;
 
+if (!function_exists('load_dotenv_if_present')) {
+    function load_dotenv_if_present(): void
+    {
+        static $loaded = false;
+        if ($loaded) {
+            return;
+        }
+        $loaded = true;
+
+        $candidates = [
+            __DIR__ . '/../../.env',
+            __DIR__ . '/../.env',
+            __DIR__ . '/.env',
+        ];
+
+        $dotenvPath = null;
+        foreach ($candidates as $path) {
+            if (is_file($path) && is_readable($path)) {
+                $dotenvPath = $path;
+                break;
+            }
+        }
+        if ($dotenvPath === null) {
+            return;
+        }
+
+        $lines = @file($dotenvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!is_array($lines)) {
+            return;
+        }
+
+        foreach ($lines as $line) {
+            $line = trim((string)$line);
+            if ($line === '' || (isset($line[0]) && $line[0] === '#')) {
+                continue;
+            }
+
+            $pos = strpos($line, '=');
+            if ($pos === false) {
+                continue;
+            }
+
+            $key = trim(substr($line, 0, $pos));
+            $value = trim(substr($line, $pos + 1));
+
+            if ($key === '') {
+                continue;
+            }
+
+            $firstChar = substr($value, 0, 1);
+            $lastChar = substr($value, -1);
+            if (($firstChar === '"' && $lastChar === '"') || ($firstChar === "'" && $lastChar === "'")) {
+                $value = substr($value, 1, -1);
+            }
+
+            // Don't override real environment variables.
+            if (getenv($key) !== false) {
+                continue;
+            }
+
+            putenv($key . '=' . $value);
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+    }
+}
+
 function mongodb_uri(): string
 {
+    load_dotenv_if_present();
+
     $uri = trim((string)(getenv('MONGODB_URI') ?: ''));
     if ($uri !== '') {
         return $uri;
@@ -55,13 +124,13 @@ function mongodb_db_name_from_uri(string $uri): string
         return $dbName;
     }
 
-    // Backward-compat
-    $legacyDb = trim((string)(getenv('MONGO_DB') ?: ''));
-    if ($legacyDb !== '') {
-        return $legacyDb;
+    // Atlas URIs often omit the DB in the URI path; allow providing it separately.
+    $envDb = trim((string)(getenv('MONGODB_DB') ?: getenv('MONGO_DB') ?: ''));
+    if ($envDb !== '') {
+        return $envDb;
     }
 
-    throw new RuntimeException('Falta el nom de base de dades a MONGODB_URI (afegeix /<db> al final)');
+    throw new RuntimeException('Falta el nom de base de dades: afegeix /<db> a MONGODB_URI o defineix MONGODB_DB');
 }
 
 function mongo_client(): Client
@@ -70,6 +139,12 @@ function mongo_client(): Client
 
     if ($client instanceof Client) {
         return $client;
+    }
+
+    if (!extension_loaded('mongodb')) {
+        throw new RuntimeException(
+            'Falta l\'extensió PHP "mongodb" (ext-mongodb). Activa-la/instal·la-la al servidor (php.ini / hosting panel).'
+        );
     }
 
     if (!class_exists(Client::class)) {

@@ -96,7 +96,7 @@ if (!function_exists('ensure_departments_seeded')) {
 			return;
 		}
 
-		$departments = ['IT', 'Support', 'Finance', 'HR', 'Sales'];
+		$departments = ['ESO', 'Batxillerat', 'FP', 'Administració'];
 		$select_stmt = $conn->prepare('SELECT DEPARTMENT_ID FROM DEPARTMENT WHERE LOWER(DEPARTMENT_NAME) = LOWER(?) LIMIT 1');
 		$insert_stmt = $conn->prepare('INSERT INTO DEPARTMENT (DEPARTMENT_NAME) VALUES (?)');
 		if ($select_stmt === false || $insert_stmt === false) {

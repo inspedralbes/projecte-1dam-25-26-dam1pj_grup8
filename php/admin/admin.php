@@ -93,7 +93,10 @@ if ($schema_ok) {
 // Carreguem departaments si existeix la columna
 $departments = [];
 if ($has_department_col) {
-    $res_dept = $conn->query('SELECT DEPARTMENT_ID, DEPARTMENT_NAME FROM DEPARTMENT ORDER BY DEPARTMENT_NAME');
+    $res_dept = $conn->query("SELECT DEPARTMENT_ID, DEPARTMENT_NAME
+        FROM DEPARTMENT
+        WHERE DEPARTMENT_NAME IN ('ESO','Batxillerat','FP','Administració')
+        ORDER BY FIELD(DEPARTMENT_NAME, 'ESO','Batxillerat','FP','Administració')");
     if ($res_dept !== false) {
         while ($drow = $res_dept->fetch_assoc()) {
             $departments[] = $drow;
