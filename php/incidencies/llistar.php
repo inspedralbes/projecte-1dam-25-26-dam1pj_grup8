@@ -124,6 +124,9 @@ if ($search_id !== '' || $search_departament !== '') {
                             </div>
                             <p><strong>Descripció:</strong></p>
                             <p class="text-muted"><?php echo htmlspecialchars((string) $row['descripcio_curta']); ?></p>
+                            <div class="mt-3">
+                                <a href="detalle_usuario.php?id=<?php echo (int)$row['id']; ?>" class="btn btn-sm btn-outline-primary">Ver detall</a>
+                            </div>
                         </div>
                     </div>
                 <?php endwhile; ?>
@@ -162,6 +165,9 @@ if ($search_id !== '' || $search_departament !== '') {
                                 </div>
                                 <p><strong>Descripció:</strong></p>
                                 <p class="text-muted"><?php echo htmlspecialchars((string) $row['descripcio_curta']); ?></p>
+                                <div class="mt-3">
+                                    <a href="detalle_usuario.php?id=<?php echo (int)$row['id']; ?>" class="btn btn-sm btn-outline-primary">Ver detall</a>
+                                </div>
                             </div>
                         </div>
                     <?php endwhile; ?>
