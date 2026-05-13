@@ -1,5 +1,20 @@
 <?php
-
+/**
+ *  - Verifica permisos de administrador
+ *  - Obtiene filtros desde la URL ($_GET)
+ *  - Consulta logs de acceso almacenados en MongoDB
+ *  - Consulta incidencias almacenadas en MySQL
+ *  - Genera estadísticas para dashboards
+ *  - Devuelve los datos en formato JSON
+ *
+ * Respuesta:
+ * {
+ *   "total": 120,
+ *   "pagesCount": 15,
+ *   "usersCount": 7,
+ *   ...
+ * }
+ */
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('ADMIN');
 
@@ -8,9 +23,26 @@ require_once __DIR__ . '/../incidencies/incidencies_schema.php';
 require_once __DIR__ . '/../incidencies/mongo_connexio.php';
 require_once __DIR__ . '/../incidencies/logger.php';
 
-header('Content-Type: application/json; charset=utf-8');
+header('Content-Type: application/json; charset=utf-8'); //api responde en json
 
-ensure_incidencies_schema($conn);
+ensure_incidencies_schema($conn); //comprobacion tablas y campos sino se crea
+
+
+/**
+ * Limpia y valida una fecha
+ * y solo acepta formato
+ *
+ * YYYY-MM-DD
+ * Ejemplos :
+ *  - 2026-05-12
+ *  - 2025-01-01
+ *
+ * @param string|null $value Fecha recibida
+ *
+ * @return string|null
+ *  - Fecha válida
+ *  - null si es inválida o vacía
+ */
 
 function clean_date(?string $value): ?string
 {
@@ -18,9 +50,11 @@ function clean_date(?string $value): ?string
     if ($value === '') {
         return null;
     }
+    //validar formato 
     return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) ? $value : null;
 }
 
+//valores de filtros
 $inicio = clean_date($_GET['inicio'] ?? null);
 $fin = clean_date($_GET['fin'] ?? null);
 $usuario = trim((string)($_GET['usuario'] ?? ''));
@@ -31,94 +65,123 @@ $incidencies_where = [];
 // MongoDB filters (access logs)
 $mongoMatch = [];
 
-function mongo_match_stage(array $match)
-{
-    // MongoDB requires $match to be a document. An empty PHP array becomes an array,
-    // so we coerce it to an empty object.
+
+/**
+ * Genera $match válido para monogo.
+ *
+ * MongoDB no acepta arrays vacíos [] como documento.
+ * Necesita un objeto vacío {}.
+ *
+ * @param array $match Filtros monogdb
+ *
+ * @return array|object
+ */
+function mongo_match_stage(array $match){
     return count($match) > 0 ? $match : (object)[];
 }
 
+//Construcción del filtro de fechas
+
 if ($inicio !== null || $fin !== null) {
-    if ($inicio !== null) {
+    if ($inicio !== null) { //fecha inicio por defecto
         $start = new DateTimeImmutable($inicio . ' 00:00:00');
     } else {
         $start = new DateTimeImmutable('1970-01-01 00:00:00');
     }
 
-    if ($fin !== null) {
+    if ($fin !== null) { //fecha fin por defecto
         $end = new DateTimeImmutable($fin . ' 23:59:59');
     } else {
         $end = new DateTimeImmutable('2100-01-01 23:59:59');
     }
 
-    $mongoMatch['timestamp'] = [
+    $mongoMatch['timestamp'] = [ //consutruir filtro de fecha
         '$gte' => new MongoDB\BSON\UTCDateTime($start->getTimestamp() * 1000),
         '$lte' => new MongoDB\BSON\UTCDateTime($end->getTimestamp() * 1000),
     ];
 }
 
 if ($usuario !== '') {
+      /**
+     * MongoDB:
+     * {
+     *   user: "admin"
+     * }
+     */
     $mongoMatch['user'] = $usuario;
 }
 
 if ($pagina !== '') {
+    //filtro paginas
     $mongoMatch['url'] = new MongoDB\BSON\Regex(preg_quote($pagina, '/'), 'i');
 }
 
-if ($inicio !== null) {
+if ($inicio !== null) {//filtro fecha inicio
     $i = $conn->real_escape_string($inicio);
     $where[] = "DATE(access_time) >= '$i'";
     $incidencies_where[] = "DATE(data_incidencia) >= '$i'";
 }
 
-if ($fin !== null) {
+if ($fin !== null) { //filtrpo fecha fin
     $f = $conn->real_escape_string($fin);
     $where[] = "DATE(access_time) <= '$f'";
     $incidencies_where[] = "DATE(data_incidencia) <= '$f'";
 }
 
-if ($usuario !== '') {
+if ($usuario !== '') { //filtro tecnico asignado
     $u = $conn->real_escape_string($usuario);
     // Filtrar incidencias por técnico asignado
     $incidencies_where[] = "tecnic_assignat = '$u'";
 }
 
-if ($pagina !== '') {
+if ($pagina !== '') { //filtor pagian sql
     $p = $conn->real_escape_string($pagina);
     $where[] = "page LIKE '%$p%'";
 }
-
+//where para sql y mongo se construye a partir de los filtros recibidos en la URL
 $filter = count($where) > 0 ? (' WHERE ' . implode(' AND ', $where)) : '';
 $incidenciesFilter = count($incidencies_where) > 0 ? (' WHERE ' . implode(' AND ', $incidencies_where)) : '';
 
-// Access stats now come from MongoDB
+ // Obtiene la base de datos MongoDB.
 $mongoDb = mongo_db();
 $logs = $mongoDb->selectCollection('access_logs');
 
 $total = (int) $logs->countDocuments($mongoMatch);
 
-$pagesCountAgg = $logs->aggregate([
+$pagesCountAgg = $logs->aggregate([ //aplicar los filtros, agfrupar por url y contar total de grupos
     ['$match' => mongo_match_stage($mongoMatch)],
     ['$group' => ['_id' => '$url']],
     ['$count' => 'total'],
 ]);
 $pagesCountDoc = $pagesCountAgg->toArray();
+//Resultado final.
 $pagesCount = (int) (($pagesCountDoc[0]->total ?? 0));
 
+
+//----------TOTAL DE USUARIOS ÚNICOS-----------------
 $usersCountAgg = $logs->aggregate([
     ['$match' => mongo_match_stage(array_merge($mongoMatch, ['user' => ['$ne' => null]]))],
     ['$group' => ['_id' => '$user']],
     ['$count' => 'total'],
 ]);
+
 $usersCountDoc = $usersCountAgg->toArray();
 $usersCount = (int) (($usersCountDoc[0]->total ?? 0));
 
+/**
+ * Obtiene las 5 páginas
+ * más visitadas.
+ */
 $pages = [];
 $pagesAgg = $logs->aggregate([
-    ['$match' => mongo_match_stage($mongoMatch)],
-    ['$group' => ['_id' => '$url', 'total' => ['$sum' => 1]]],
-    ['$sort' => ['total' => -1]],
-    ['$limit' => 5],
+    ['$match' => mongo_match_stage($mongoMatch)], // Aplicar filtros
+    ['$group' => ['_id' => '$url', 'total' => ['$sum' => 1]]],// Agrupar por URL
+    ['$sort' => ['total' => -1]],// Orden descendente
+    ['$limit' => 5], // Limitar a 5 resultados
+    /**
+     * Otro nombre a campos para
+     * simplificar el JSON final.
+     */
     ['$project' => ['_id' => 0, 'page' => '$_id', 'total' => 1]],
 ]);
 foreach ($pagesAgg as $doc) {
@@ -137,9 +200,14 @@ foreach ($usersAgg as $doc) {
     $users[] = ['username' => (string)($doc->username ?? ''), 'total' => (int)($doc->total ?? 0)];
 }
 
+/**
+ * Genera estadisticas por dia
+ * para grafics temporales.
+ */
 $trend = [];
 $trendAgg = $logs->aggregate([
     ['$match' => mongo_match_stage($mongoMatch)],
+    //agrdupa acceso por fecha
     ['$group' => [
         '_id' => [
             '$dateToString' => [
@@ -150,13 +218,23 @@ $trendAgg = $logs->aggregate([
         ],
         'total' => ['$sum' => 1],
     ]],
-    ['$sort' => ['_id' => 1]],
-    ['$project' => ['_id' => 0, 'dia' => '$_id', 'total' => 1]],
+    ['$sort' => ['_id' => 1]], // Orden cronológico
+    ['$project' => ['_id' => 0, 'dia' => '$_id', 'total' => 1]], //form final
 ]);
 foreach ($trendAgg as $doc) {
     $trend[] = ['dia' => (string)($doc->dia ?? ''), 'total' => (int)($doc->total ?? 0)];
 }
-
+// ----------ESTADÍSTICAS DE INCIDENCIAS-----------------
+/**
+ * Obtiene num de incidencias
+ * agrupadas por estado.
+ *
+ * Ejemplo:
+ *  - assignada
+ *  - tancada
+ *  - pendent
+ *  - rebutjada
+ */
 $incidenciesStatus = [];
 $res = $conn->query("SELECT estat, COUNT(*) total FROM incidencies $incidenciesFilter GROUP BY estat ORDER BY total DESC");
 if ($res !== false) {
@@ -176,22 +254,32 @@ if ($res !== false) {
 }
 
 $deptMatrix = [];
-
+/**
+ * prioritats de incidencias
+ */
 $priorityMap = [
     'alta' => 'Alta',
     'mitja' => 'Mitja',
     'baixa' => 'Baixa',
 ];
-
+/**
+ * amb una "matriu" de deps y prioritats:
+ *
+ * Departamento =>
+ *   Alta
+ *   Mitja
+ *   Baixa
+ *   Total
+ */
 foreach ($incidenciesByDept as $row) {
     $dept = trim((string)($row['departament'] ?? ''));
     $prioritat = strtolower(trim((string)($row['prioritat'] ?? '')));
     $totalDept = (int)($row['total'] ?? 0);
-
-    if ($dept === '') {
+    
+    if ($dept === '') { //si no existe dept
         $dept = 'Sense departament';
     }
-
+    //contadors
     if (!isset($deptMatrix[$dept])) {
         $deptMatrix[$dept] = ['Alta' => 0, 'Mitja' => 0, 'Baixa' => 0, 'total' => 0];
     }
@@ -231,9 +319,16 @@ if (count($deptOrdered) > count($deptLabels)) {
     $deptData['Mitja'][] = $otherMitja;
     $deptData['Baixa'][] = $otherBaixa;
 }
-
+//Respuesta final de la API
+/*
+Fcionalidades:
+ *  - obte estadísticas de accesos desde mongo
+ *  - Consulta metricas(número, estado, usua unicos, paginas mas viistadas, accesos por dia) de incidencias desde MySQL
+ *  - Procesa y organiza los datos
+ *  - Devuelve  info en formato JSON
+ * */
 echo json_encode([
-    'total' => $total,
+    'total' => $total, 
     'pagesCount' => $pagesCount,
     'usersCount' => $usersCount,
     'pages' => $pages,

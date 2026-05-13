@@ -3,7 +3,6 @@
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('ADMIN');
 
-// Show the "Crear Usuari" button in the header for this page.
 $showCrearUsuariButton = true;
 $showUsuarisButton = true;
 
@@ -13,7 +12,7 @@ require_once __DIR__ . '/../incidencies/usuari_schema.php';
 require_once __DIR__ . '/../incidencies/tecnic_schema.php';
 
 $alert = null;
-$schema_result = ensure_usuari_schema($conn);
+$schema_result = ensure_usuari_schema($conn); //comporbar que el esquema existeix sino es crea
 $schema_ok = (is_array($schema_result) && ($schema_result['ok'] ?? false) === true);
 if (!is_array($schema_result) || ($schema_result['ok'] ?? false) !== true) {
     $alert = [
@@ -22,10 +21,13 @@ if (!is_array($schema_result) || ($schema_result['ok'] ?? false) !== true) {
     ];
 }
 
-// (button is now enabled above before header include)
+
 
 $allowed_roles = ['TECNIC', 'ADMIN', 'RESPONSABLE', 'PROFESSOR'];
-
+/**
+ * Carrega els tècnics disponibles
+ * per omplir el selector de filtres.
+ */
 $tecnics_disponibles = [];
 if ($schema_ok) {
     $tecnic_schema_result = ensure_tecnic_schema($conn);
@@ -47,10 +49,17 @@ $usuaris_rows = [];
 $selected_usuari = null;
 $open_usuari_detail_modal = false;
 $has_created_at_col = $schema_ok ? columna_existeix($conn, 'USUARI', 'CREATED_AT') : false;
-
+/**
+ * Gestiona les accions principals rebudes
+ * des dels formularis del panell.
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
     $action = (string)($_POST['action'] ?? '');
 
+    /**
+     * Mostra la informació detallada
+     * d'un usuari seleccionat.
+     */
     if ($action === 'view_usuari') {
         $usuari_id = (int)($_POST['usuari_id'] ?? 0);
         if ($usuari_id > 0) {
@@ -69,7 +78,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
             }
         }
     }
-
+    /**
+     * Actualitza les dades bàsiques
+     * d'un usuari existent.
+     */
     if ($action === 'update_usuari') {
         $usuari_id = (int)($_POST['usuari_id'] ?? 0);
         $first_name_u = trim((string)($_POST['first_name'] ?? ''));
@@ -77,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
         $email_u = trim((string)($_POST['email'] ?? ''));
         $phone_u = trim((string)($_POST['phone'] ?? ''));
         $role_u = strtoupper(trim((string)($_POST['role'] ?? '')));
-
+        //valida les dades del form abans de guardar-les
         $errors_u = [];
         if ($usuari_id <= 0) {
             $errors_u[] = 'Usuari invàlid.';
@@ -166,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
 
                 $alert = ['type' => 'success', 'message' => 'Usuari actualitzat correctament.'];
 
-                // Reload selected user for detail modal.
+              
                 $stmt = $conn->prepare('SELECT * FROM USUARI WHERE USUARI_ID = ?');
                 if ($stmt !== false) {
                     $stmt->bind_param('i', $usuari_id);
@@ -183,14 +195,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
             }
         }
     }
-
+    /**
+     * Manté sincronitzada la taula TECNIC
+     * quan l'usuari és tècnic o responsable. recupera i neteja
+     */
     if ($action === 'create_usuari') {
         $first_name = trim((string)($_POST['first_name'] ?? ''));
         $last_name = trim((string)($_POST['last_name'] ?? ''));
         $email = trim((string)($_POST['email'] ?? ''));
         $phone = trim((string)($_POST['phone'] ?? ''));
         $role = strtoupper(trim((string)($_POST['role'] ?? '')));
-
+        //valida les dades del form abans de guardar-les
         $errors = [];
         if ($first_name === '') {
             $errors[] = 'El nom és obligatori.';
@@ -209,15 +224,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
 
         if (count($errors) > 0) {
             $alert = ['type' => 'warning', 'message' => implode(' ', $errors)];
-        } else {
+        } else { //comprueba si existe las columnas
             $has_password_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'PASSWORD') : false;
             $has_password_hash_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'PASSWORD_HASH') : false;
             $has_username_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'USERNAME') : false;
             $has_phone_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'PHONE_NUMBER') : false;
             $has_department_col = function_exists('columna_existeix') ? columna_existeix($conn, 'USUARI', 'DEPARTMENT_ID') : false;
 
-            // If auth fields exist, we can create a proper account without hardcoded credentials.
-            // We generate a random password hash (user should reset via future functionality).
+            /**
+             * Genera i prepara les dades necessàries
+             * per inserir el nou usuari a la base de dades.
+             */
             $generated_username = '';
             $generated_hash = '';
             if ($has_username_col) {
@@ -228,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
             if ($has_password_hash_col) {
                 $generated_hash = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
             }
-
+            // Inserta el nuevo usuario en la base de datos
             if ($has_username_col && $has_password_hash_col && $has_password_col && $has_department_col) {
                 $stmt = $conn->prepare('INSERT INTO USUARI (USERNAME, FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PASSWORD_HASH, PHONE_NUMBER, DEPARTMENT_ID, ROLE, IS_VERIFIED) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             } elseif ($has_username_col && $has_password_hash_col && $has_password_col) {
@@ -242,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
             } elseif ($has_password_col) {
                 $stmt = $conn->prepare('INSERT INTO USUARI (FIRST_NAME, LAST_NAME, EMAIL, PASSWORD, PHONE_NUMBER, ROLE) VALUES (?, ?, ?, ?, ?, ?)');
             } else {
-                // Newer simplified schema
+                
                 $stmt = $conn->prepare('INSERT INTO USUARI (FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER, ROLE) VALUES (?, ?, ?, ?, ?)');
             }
             if ($stmt === false) {
@@ -279,14 +296,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
                 } else {
                     $stmt->bind_param('sssss', $first_name, $last_name, $email, $phone_value, $role);
                 }
-                $ok = $stmt->execute();
+                $ok = $stmt->execute(); //inserció
                 $stmt->close();
 
                 if (!$ok) {
-                    // Most common: duplicate email.
+                    // duplicar email error
                     $alert = ['type' => 'danger', 'message' => "No s'ha pogut crear l'usuari: " . $conn->error];
                 } else {
-                    // If it's a technician/responsible, also ensure it exists in TECNIC (used by dropdowns).
+                    /**
+                     * Si el nou usuari és tecnic o responsable,
+                     * també s'afegeix a la taula TECNIC
+                     */
                     if ($role === 'TECNIC' || $role === 'RESPONSABLE') {
                         $tecnic_schema_result = ensure_tecnic_schema($conn);
                         if (is_array($tecnic_schema_result) && ($tecnic_schema_result['ok'] ?? false) === true) {
@@ -317,7 +337,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
                             }
                         }
                     }
-
+                    //mensaje final usuario creado
                     $alert = ['type' => 'success', 'message' => "Usuari creat correctament ($first_name $last_name)."];
                 }
             }
@@ -325,7 +345,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $alert === null) {
     }
 }
 
-// Always load user list after handling POST so the modal shows fresh data.
+/**
+ * Carrega el llistat d'usuaris
+ * per mostrar-lo .
+ */
 if ($schema_ok) {
     $usuaris_rows = [];
     $select_sql = $has_created_at_col
