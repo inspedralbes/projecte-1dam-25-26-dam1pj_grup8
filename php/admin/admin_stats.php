@@ -25,7 +25,15 @@ require_once __DIR__ . '/../incidencies/logger.php';
 
 header('Content-Type: application/json; charset=utf-8'); //api responde en json
 
-ensure_incidencies_schema($conn); //comprobacion tablas y campos sino se crea
+$errors = [];
+$mongoOk = true;
+$mysqlOk = true;
+
+$schemaResult = ensure_incidencies_schema($conn); //comprobacion tablas y campos sino se crea
+if (is_array($schemaResult) && (($schemaResult['ok'] ?? false) !== true)) {
+    $mysqlOk = false;
+    $errors['mysql'] = (string)($schemaResult['error'] ?? 'Error assegurant l\'esquema de incidències');
+}
 
 
 /**
@@ -62,8 +70,13 @@ $pagina = trim((string)($_GET['pagina'] ?? ''));
 $where = [];
 $incidencies_where = [];
 
-// MongoDB filters (access logs)
-$mongoMatch = [];
+// Defaults so the API always returns a complete JSON shape.
+$total = 0;
+$pagesCount = 0;
+$usersCount = 0;
+$pages = [];
+$users = [];
+$trend = [];
 
 
 /**
@@ -78,42 +91,6 @@ $mongoMatch = [];
  */
 function mongo_match_stage(array $match){
     return count($match) > 0 ? $match : (object)[];
-}
-
-//Construcción del filtro de fechas
-
-if ($inicio !== null || $fin !== null) {
-    if ($inicio !== null) { //fecha inicio por defecto
-        $start = new DateTimeImmutable($inicio . ' 00:00:00');
-    } else {
-        $start = new DateTimeImmutable('1970-01-01 00:00:00');
-    }
-
-    if ($fin !== null) { //fecha fin por defecto
-        $end = new DateTimeImmutable($fin . ' 23:59:59');
-    } else {
-        $end = new DateTimeImmutable('2100-01-01 23:59:59');
-    }
-
-    $mongoMatch['timestamp'] = [ //consutruir filtro de fecha
-        '$gte' => new MongoDB\BSON\UTCDateTime($start->getTimestamp() * 1000),
-        '$lte' => new MongoDB\BSON\UTCDateTime($end->getTimestamp() * 1000),
-    ];
-}
-
-if ($usuario !== '') {
-      /**
-     * MongoDB:
-     * {
-     *   user: "admin"
-     * }
-     */
-    $mongoMatch['user'] = $usuario;
-}
-
-if ($pagina !== '') {
-    //filtro paginas
-    $mongoMatch['url'] = new MongoDB\BSON\Regex(preg_quote($pagina, '/'), 'i');
 }
 
 if ($inicio !== null) {//filtro fecha inicio
@@ -142,87 +119,116 @@ if ($pagina !== '') { //filtor pagian sql
 $filter = count($where) > 0 ? (' WHERE ' . implode(' AND ', $where)) : '';
 $incidenciesFilter = count($incidencies_where) > 0 ? (' WHERE ' . implode(' AND ', $incidencies_where)) : '';
 
- // Obtiene la base de datos MongoDB.
-$mongoDb = mongo_db();
-$logs = $mongoDb->selectCollection('access_logs');
+// ----------ESTADÍSTICAS DE ACCESOS (MongoDB)-----------------
+try {
+    $mongoMatch = [];
 
-$total = (int) $logs->countDocuments($mongoMatch);
+    // Construcción del filtro de fechas
+    if ($inicio !== null || $fin !== null) {
+        if ($inicio !== null) {
+            $start = new DateTimeImmutable($inicio . ' 00:00:00');
+        } else {
+            $start = new DateTimeImmutable('1970-01-01 00:00:00');
+        }
 
-$pagesCountAgg = $logs->aggregate([ //aplicar los filtros, agfrupar por url y contar total de grupos
-    ['$match' => mongo_match_stage($mongoMatch)],
-    ['$group' => ['_id' => '$url']],
-    ['$count' => 'total'],
-]);
-$pagesCountDoc = $pagesCountAgg->toArray();
-//Resultado final.
-$pagesCount = (int) (($pagesCountDoc[0]->total ?? 0));
+        if ($fin !== null) {
+            $end = new DateTimeImmutable($fin . ' 23:59:59');
+        } else {
+            $end = new DateTimeImmutable('2100-01-01 23:59:59');
+        }
 
+        $mongoMatch['timestamp'] = [
+            '$gte' => new MongoDB\BSON\UTCDateTime($start->getTimestamp() * 1000),
+            '$lte' => new MongoDB\BSON\UTCDateTime($end->getTimestamp() * 1000),
+        ];
+    }
 
-//----------TOTAL DE USUARIOS ÚNICOS-----------------
-$usersCountAgg = $logs->aggregate([
-    ['$match' => mongo_match_stage(array_merge($mongoMatch, ['user' => ['$ne' => null]]))],
-    ['$group' => ['_id' => '$user']],
-    ['$count' => 'total'],
-]);
+    if ($usuario !== '') {
+        $mongoMatch['user'] = $usuario;
+    }
 
-$usersCountDoc = $usersCountAgg->toArray();
-$usersCount = (int) (($usersCountDoc[0]->total ?? 0));
+    if ($pagina !== '') {
+        $mongoMatch['url'] = new MongoDB\BSON\Regex(preg_quote($pagina, '/'), 'i');
+    }
 
-/**
- * Obtiene las 5 páginas
- * más visitadas.
- */
-$pages = [];
-$pagesAgg = $logs->aggregate([
-    ['$match' => mongo_match_stage($mongoMatch)], // Aplicar filtros
-    ['$group' => ['_id' => '$url', 'total' => ['$sum' => 1]]],// Agrupar por URL
-    ['$sort' => ['total' => -1]],// Orden descendente
-    ['$limit' => 5], // Limitar a 5 resultados
-    /**
-     * Otro nombre a campos para
-     * simplificar el JSON final.
-     */
-    ['$project' => ['_id' => 0, 'page' => '$_id', 'total' => 1]],
-]);
-foreach ($pagesAgg as $doc) {
-    $pages[] = ['page' => (string)($doc->page ?? ''), 'total' => (int)($doc->total ?? 0)];
-}
+    $mongoDb = mongo_db();
+    $logs = $mongoDb->selectCollection('access_logs');
 
-$users = [];
-$usersAgg = $logs->aggregate([
-    ['$match' => mongo_match_stage(array_merge($mongoMatch, ['user' => ['$ne' => null]]))],
-    ['$group' => ['_id' => '$user', 'total' => ['$sum' => 1]]],
-    ['$sort' => ['total' => -1]],
-    ['$limit' => 5],
-    ['$project' => ['_id' => 0, 'username' => '$_id', 'total' => 1]],
-]);
-foreach ($usersAgg as $doc) {
-    $users[] = ['username' => (string)($doc->username ?? ''), 'total' => (int)($doc->total ?? 0)];
-}
+    $total = (int) $logs->countDocuments($mongoMatch);
 
-/**
- * Genera estadisticas por dia
- * para grafics temporales.
- */
-$trend = [];
-$trendAgg = $logs->aggregate([
-    ['$match' => mongo_match_stage($mongoMatch)],
-    //agrdupa acceso por fecha
-    ['$group' => [
-        '_id' => [
-            '$dateToString' => [
-                'format' => '%Y-%m-%d',
-                'date' => '$timestamp',
-                'timezone' => 'UTC',
+    $pagesCountAgg = $logs->aggregate([
+        ['$match' => mongo_match_stage($mongoMatch)],
+        ['$group' => ['_id' => '$url']],
+        ['$count' => 'total'],
+    ]);
+    $pagesCountDoc = $pagesCountAgg->toArray();
+    $pagesCountFirst = $pagesCountDoc[0] ?? null;
+    if (is_object($pagesCountFirst)) {
+        $pagesCount = (int)($pagesCountFirst->total ?? 0);
+    } elseif (is_array($pagesCountFirst)) {
+        $pagesCount = (int)($pagesCountFirst['total'] ?? 0);
+    } else {
+        $pagesCount = 0;
+    }
+
+    $usersCountAgg = $logs->aggregate([
+        ['$match' => mongo_match_stage(array_merge($mongoMatch, ['user' => ['$ne' => null]]))],
+        ['$group' => ['_id' => '$user']],
+        ['$count' => 'total'],
+    ]);
+    $usersCountDoc = $usersCountAgg->toArray();
+    $usersCountFirst = $usersCountDoc[0] ?? null;
+    if (is_object($usersCountFirst)) {
+        $usersCount = (int)($usersCountFirst->total ?? 0);
+    } elseif (is_array($usersCountFirst)) {
+        $usersCount = (int)($usersCountFirst['total'] ?? 0);
+    } else {
+        $usersCount = 0;
+    }
+
+    $pagesAgg = $logs->aggregate([
+        ['$match' => mongo_match_stage($mongoMatch)],
+        ['$group' => ['_id' => '$url', 'total' => ['$sum' => 1]]],
+        ['$sort' => ['total' => -1]],
+        ['$limit' => 5],
+        ['$project' => ['_id' => 0, 'page' => '$_id', 'total' => 1]],
+    ]);
+    foreach ($pagesAgg as $doc) {
+        $pages[] = ['page' => (string)($doc->page ?? ''), 'total' => (int)($doc->total ?? 0)];
+    }
+
+    $usersAgg = $logs->aggregate([
+        ['$match' => mongo_match_stage(array_merge($mongoMatch, ['user' => ['$ne' => null]]))],
+        ['$group' => ['_id' => '$user', 'total' => ['$sum' => 1]]],
+        ['$sort' => ['total' => -1]],
+        ['$limit' => 5],
+        ['$project' => ['_id' => 0, 'username' => '$_id', 'total' => 1]],
+    ]);
+    foreach ($usersAgg as $doc) {
+        $users[] = ['username' => (string)($doc->username ?? ''), 'total' => (int)($doc->total ?? 0)];
+    }
+
+    $trendAgg = $logs->aggregate([
+        ['$match' => mongo_match_stage($mongoMatch)],
+        ['$group' => [
+            '_id' => [
+                '$dateToString' => [
+                    'format' => '%Y-%m-%d',
+                    'date' => '$timestamp',
+                    'timezone' => 'UTC',
+                ],
             ],
-        ],
-        'total' => ['$sum' => 1],
-    ]],
-    ['$sort' => ['_id' => 1]], // Orden cronológico
-    ['$project' => ['_id' => 0, 'dia' => '$_id', 'total' => 1]], //form final
-]);
-foreach ($trendAgg as $doc) {
-    $trend[] = ['dia' => (string)($doc->dia ?? ''), 'total' => (int)($doc->total ?? 0)];
+            'total' => ['$sum' => 1],
+        ]],
+        ['$sort' => ['_id' => 1]],
+        ['$project' => ['_id' => 0, 'dia' => '$_id', 'total' => 1]],
+    ]);
+    foreach ($trendAgg as $doc) {
+        $trend[] = ['dia' => (string)($doc->dia ?? ''), 'total' => (int)($doc->total ?? 0)];
+    }
+} catch (Throwable $e) {
+    $mongoOk = false;
+    $errors['mongo'] = $e->getMessage();
 }
 // ----------ESTADÍSTICAS DE INCIDENCIAS-----------------
 /**
@@ -237,7 +243,12 @@ foreach ($trendAgg as $doc) {
  */
 $incidenciesStatus = [];
 $res = $conn->query("SELECT estat, COUNT(*) total FROM incidencies $incidenciesFilter GROUP BY estat ORDER BY total DESC");
-if ($res !== false) {
+if ($res === false) {
+    $mysqlOk = false;
+    if (!isset($errors['mysql'])) {
+        $errors['mysql'] = 'Error consultant incidències per estat: ' . $conn->error;
+    }
+} else {
     while ($r = $res->fetch_assoc()) {
         $incidenciesStatus[] = $r;
     }
@@ -246,7 +257,12 @@ if ($res !== false) {
 
 $incidenciesByDept = [];
 $res = $conn->query("SELECT departament, prioritat, COUNT(*) total FROM incidencies $incidenciesFilter GROUP BY departament, prioritat ORDER BY total DESC");
-if ($res !== false) {
+if ($res === false) {
+    $mysqlOk = false;
+    if (!isset($errors['mysql'])) {
+        $errors['mysql'] = 'Error consultant incidències per departament/prioritat: ' . $conn->error;
+    }
+} else {
     while ($r = $res->fetch_assoc()) {
         $incidenciesByDept[] = $r;
     }
@@ -327,8 +343,8 @@ Fcionalidades:
  *  - Procesa y organiza los datos
  *  - Devuelve  info en formato JSON
  * */
-echo json_encode([
-    'total' => $total, 
+$response = [
+    'total' => $total,
     'pagesCount' => $pagesCount,
     'usersCount' => $usersCount,
     'pages' => $pages,
@@ -339,4 +355,12 @@ echo json_encode([
         'deptLabels' => $deptLabels,
         'deptPriority' => $deptData,
     ],
-]);
+    'mongoOk' => $mongoOk,
+    'mysqlOk' => $mysqlOk,
+];
+
+if (!empty($errors)) {
+    $response['errors'] = $errors;
+}
+
+echo json_encode($response);

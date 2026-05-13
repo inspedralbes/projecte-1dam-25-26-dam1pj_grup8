@@ -31,9 +31,31 @@ if (statsLink) {
   statsLink.href = url;
 }
 
+let data;
+try {
+  const r = await fetch(url, {
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
 
-let r=await fetch(url);
-let data=await r.json();
+  const contentType = (r.headers.get('content-type') || '').toLowerCase();
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`HTTP ${r.status}: ${text.slice(0, 300)}`);
+  }
+
+  if (!contentType.includes('application/json')) {
+    const text = await r.text();
+    throw new Error(`Resposta no JSON: ${text.slice(0, 300)}`);
+  }
+
+  data = await r.json();
+} catch (err) {
+  console.error('No s\'han pogut carregar les estadístiques', err);
+  alert('No s\'han pogut carregar les estadístiques. Revisa el link "View JSON" per veure l\'error.');
+  return;
+}
 
 document.getElementById('totalAccess').innerText=data.total;
 document.getElementById('totalPages').innerText=data.pagesCount;
