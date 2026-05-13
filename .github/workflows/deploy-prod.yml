@@ -14,6 +14,8 @@ jobs:
       MYSQL_ROOT_PASSWORD: test
       MYSQL_USER: test
       MYSQL_PASSWORD: test
+      MONGODB_URI: mongodb://example.invalid:27017/incidencies
+      MONGODB_DB: incidencies
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,12 +38,14 @@ jobs:
           MYSQL_ROOT_PASSWORD: ${{ secrets.PROD_MYSQL_ROOT_PASSWORD }}
           MYSQL_USER: ${{ secrets.PROD_MYSQL_USER }}
           MYSQL_PASSWORD: ${{ secrets.PROD_MYSQL_PASSWORD }}
+          MONGODB_URI: ${{ secrets.PROD_MONGODB_URI }}
+          MONGODB_DB: ${{ secrets.PROD_MONGODB_DB }}
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
-          envs: VAR2,MYSQL_ROOT_PASSWORD,MYSQL_USER,MYSQL_PASSWORD
+          envs: VAR2,MYSQL_ROOT_PASSWORD,MYSQL_USER,MYSQL_PASSWORD,MONGODB_URI,MONGODB_DB
           script: |
             cd "${{ secrets.PROD_DEPLOY_PATH }}"
             cat > .env <<EOF
@@ -49,6 +53,8 @@ jobs:
             MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
             MYSQL_USER=${MYSQL_USER}
             MYSQL_PASSWORD=${MYSQL_PASSWORD}
+            MONGODB_URI=${MONGODB_URI}
+            MONGODB_DB=${MONGODB_DB}
             EOF
             git pull origin main
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans

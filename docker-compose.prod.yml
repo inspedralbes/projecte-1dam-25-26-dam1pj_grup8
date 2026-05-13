@@ -10,6 +10,11 @@ services:
       VAR2: ${VAR2}
       # MongoDB Atlas (production)
       MONGODB_URI: ${MONGODB_URI}
+      # Optional (useful when the URI omits /<db>)
+      MONGODB_DB: ${MONGODB_DB:-}
+      # Backward-compat (older variable names)
+      MONGO_URI: ${MONGO_URI:-}
+      MONGO_DB: ${MONGO_DB:-}
     depends_on:
       - db
     restart: unless-stopped

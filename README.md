@@ -30,5 +30,7 @@ Secrets necessaris a GitHub:
 * `PROD_MYSQL_ROOT_PASSWORD`
 * `PROD_MYSQL_USER`
 * `PROD_MYSQL_PASSWORD`
+* `PROD_MONGODB_URI`
+* `PROD_MONGODB_DB` (opcional, si la URI no inclou /<db>)
 
 El workflow fa build de la imatge i, si el push és a `main`, entra per SSH al servidor i executa `docker compose -f docker-compose.prod.yml up -d --build`.
