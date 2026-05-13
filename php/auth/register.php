@@ -64,7 +64,10 @@ function password_is_valid(string $p, string $p2, array &$errors): bool
 
 $departments = [];
 if ($schema_ok && taula_existeix($conn, 'DEPARTMENT')) {
-    $res = $conn->query('SELECT DEPARTMENT_ID, DEPARTMENT_NAME FROM DEPARTMENT ORDER BY DEPARTMENT_NAME ASC');
+    $res = $conn->query("SELECT DEPARTMENT_ID, DEPARTMENT_NAME
+        FROM DEPARTMENT
+        WHERE DEPARTMENT_NAME IN ('ESO','Batxillerat','FP','Administració')
+        ORDER BY FIELD(DEPARTMENT_NAME, 'ESO','Batxillerat','FP','Administració')");
     if ($res !== false) {
         while ($row = $res->fetch_assoc()) {
             $departments[] = $row;
