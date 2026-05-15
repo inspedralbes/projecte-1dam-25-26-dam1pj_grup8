@@ -101,7 +101,7 @@ if(accessTrendChart) accessTrendChart.destroy();
 accessTrendChart=new Chart(
 document.getElementById('accessTrendChart'),
 {
-type:'line',
+type:'line', // gráfico de líneas para mostrar la evolución temporal
 data:{
 labels:trendLabels,
 datasets:[{
@@ -142,11 +142,11 @@ rebutjada: '#ef4444'
 };
 
 if(incidenciesStatusChart) incidenciesStatusChart.destroy();
-
+// creamos chart para realizar la gráfica de estado de incidencias
 incidenciesStatusChart=new Chart(
 document.getElementById('incidenciesStatusChart'),
 {
-type:'doughnut',
+type:'doughnut', // grafico donut para mostrar proporciones
 data:{
 labels:statusData.map(x=>statusLabels[x.estat] || x.estat),
 datasets:[{
@@ -172,7 +172,7 @@ if(incidenciesTypePriorityChart) incidenciesTypePriorityChart.destroy();
 incidenciesTypePriorityChart=new Chart(
 document.getElementById('incidenciesTypePriorityChart'),
 {
-type:'bar',
+type:'bar', // grafico barras
 data:{
 labels:Array.isArray(data.incidencies?.deptLabels) ? data.incidencies.deptLabels : [],
 datasets:[{
