@@ -52,3 +52,11 @@ Checklist:
 
 El desplegament automàtic queda configurat amb GitHub Actions a `.github/workflows/deploy-prod.yml`.
 git p
+
+## MODEL E/R
+<img width="1219" height="674" alt="Captura de pantalla de 2026-05-15 09-00-17" src="https://github.com/user-attachments/assets/8d73c198-dac5-4c69-b337-a309dd26239d" />
+
+
+## DIAGRAMA CASOS
+<img width="606" height="767" alt="diagramaCasosUsFinal drawio" src="https://github.com/user-attachments/assets/a21c9f89-9bbf-4f37-970a-d59c0dae018d" />
+
