@@ -1,4 +1,13 @@
 <?php
+/**
+ * Logger de accesos (auditoría ligera).
+ *
+ * Se ejecuta en cada petición HTTP (incluido desde `header.php`).
+ * Estrategia:
+ * - Intenta guardar el log en MongoDB (`access_logs`).
+ * - Si MongoDB no está disponible (producción FTP/hosting), hace fallback a MySQL (`access_logs`).
+ * - Si MySQL tampoco está disponible, escribe en `php/storage/access_logs.jsonl`.
+ */
 
 // Logger d'accessos a MongoDB.
 // S'executa a cada petició HTTP (inclòs des de header.php) i desa un document

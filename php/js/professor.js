@@ -1,3 +1,9 @@
+/**
+ * UX helper (Professor).
+ *
+ * Anima la caja principal del panel del profesor al cargar la página.
+ */
+
 document.addEventListener("DOMContentLoaded", function () {
 
     // Selecciona la caja del profesor del HTML

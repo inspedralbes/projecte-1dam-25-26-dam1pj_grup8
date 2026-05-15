@@ -1,4 +1,14 @@
 <?php
+/**
+ * Panel del rol TECNIC.
+ *
+ * Permite al técnico:
+ * - Ver incidencias asignadas y su historial.
+ * - Iniciar una tarea (marca `data_inici_tasca`).
+ * - Cerrar una incidencia (marca `estat` y `data_tancament`).
+ *
+ * Depende de MySQL y de los helpers de esquema en `incidencies_schema.php`.
+ */
 
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('TECNIC');

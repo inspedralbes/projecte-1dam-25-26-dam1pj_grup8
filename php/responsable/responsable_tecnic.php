@@ -1,4 +1,13 @@
 <?php
+/**
+ * Panel del rol RESPONSABLE.
+ *
+ * Permite:
+ * - Revisar incidencias pendientes.
+ * - Asignarlas a un técnico.
+ * - Editar prioridad y tipología.
+ * - Rechazar o desasignar incidencias.
+ */
 
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('RESPONSABLE');

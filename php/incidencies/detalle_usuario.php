@@ -1,4 +1,10 @@
 <?php
+/**
+ * Vista de detalle para el usuario autenticado (PROFESSOR/usuario final).
+ *
+ * - Carga una incidencia del usuario (por email) desde MySQL.
+ * - Muestra work logs visibles para el usuario (visible_to_user=1).
+ */
 require_once __DIR__ . '/auth.php';
 auth_require_login();
 

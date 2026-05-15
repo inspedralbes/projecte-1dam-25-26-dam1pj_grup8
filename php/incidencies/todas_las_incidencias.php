@@ -1,4 +1,11 @@
-<?php include 'header.php'; ?>
+<?php
+/**
+ * Página de administración auxiliar: muestra todas las incidencias.
+ *
+ * Renderiza el listado usando `incidencies_list.php`.
+ */
+include 'header.php';
+?>
 
 <?php $bgImage = "/img/header.png"; ?>
 

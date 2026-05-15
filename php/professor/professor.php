@@ -1,4 +1,11 @@
 <?php
+/**
+ * Home del rol PROFESSOR.
+ *
+ * Acciones disponibles:
+ * - Consultar incidencias.
+ * - Registrar una nueva incidencia.
+ */
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('PROFESSOR');
 include __DIR__ . '/../incidencies/header.php';

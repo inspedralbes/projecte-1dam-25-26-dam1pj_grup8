@@ -1,4 +1,10 @@
 <?php
+/**
+ * Edición básica de una incidencia (legacy).
+ *
+ * - Carga una incidencia por ID.
+ * - Permite actualizar departamento, descripción corta y tipología.
+ */
 require_once 'connexio.php';
 require_once 'incidencies_list.php';
 

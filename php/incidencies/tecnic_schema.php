@@ -1,4 +1,10 @@
 <?php
+/**
+ * Esquema de técnicos (tabla `TECNIC`).
+ *
+ * - Crea/actualiza la tabla y columnas necesarias.
+ * - Inserta técnicos de demo si no existen (por email) para poblar desplegables.
+ */
 
 // Helpers to keep the "TECNIC" table schema compatible across environments.
 // Important: MySQL init scripts in db_init/ only run on a fresh database volume.

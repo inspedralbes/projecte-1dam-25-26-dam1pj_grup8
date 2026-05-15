@@ -1,4 +1,10 @@
 <?php
+/**
+ * Informes del rol TECNIC.
+ *
+ * Genera informes agregados (incidencias + worklogs) para análisis de trabajo.
+ * Se apoya en MySQL y en el esquema definido en `incidencies_schema.php`.
+ */
 
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('TECNIC');

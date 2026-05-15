@@ -1,4 +1,10 @@
 <?php
+/**
+ * Esquema de logs de acceso en MySQL (fallback cuando MongoDB no está disponible).
+ *
+ * Tabla: `access_logs` (username, page, access_time).
+ * Nota: el seeding de datos demo está desactivado por defecto.
+ */
 
 function ensure_access_logs_schema($conn, bool $seedDemo = false): void
 {

@@ -1,4 +1,11 @@
 <?php
+/**
+ * Detalle de una incidencia (roles: TECNIC, RESPONSABLE, ADMIN).
+ *
+ * - Muestra la información de la incidencia.
+ * - Permite añadir Work Logs (registro de actuación) vía POST.
+ * - Implementa PRG (Post/Redirect/Get) para evitar reenvíos.
+ */
 require_once __DIR__ . '/auth.php';
 auth_require_role(['TECNIC', 'RESPONSABLE', 'ADMIN']);
 

@@ -1,4 +1,11 @@
 <?php
+/**
+ * Conexión a MySQL.
+ *
+ * - Soporta Docker Compose (host `db`) y despliegues en hosting.
+ * - Permite configuración por variables de entorno y carga opcional de `.env`.
+ * - Expone la conexión en la variable `$conn`.
+ */
 
 // Tots els fitxers PHP que utilitzin la connexió a la base de dades han de
 // incloure aquest fitxer al principi del codi PHP.

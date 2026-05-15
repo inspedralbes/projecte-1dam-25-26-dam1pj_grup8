@@ -1,4 +1,12 @@
 <?php
+/**
+ * Conexión a MongoDB (Atlas o instancia accesible).
+ *
+ * Responsabilidades:
+ * - Cargar opcionalmente `.env` cuando no hay variables de entorno.
+ * - Validar la extensión `ext-mongodb` y dependencias de Composer.
+ * - Exponer helpers `mongo_client()` y `mongo_db()`.
+ */
 
 // Connexió MongoDB (Atlas o qualsevol MongoDB accessible)
 // Ús:

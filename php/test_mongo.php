@@ -1,4 +1,13 @@
 <?php
+/**
+ * Script de diagnóstico de MongoDB (pensado para CLI).
+ *
+ * Comprueba:
+ * - Que la extensión PHP `mongodb` (ext-mongodb) está cargada.
+ * - Que existe `MONGODB_URI`.
+ * - Conexión + ping.
+ * - (Opcional) escritura/lectura en una colección de test.
+ */
 
 require_once __DIR__ . '/incidencies/mongo_connexio.php';
 

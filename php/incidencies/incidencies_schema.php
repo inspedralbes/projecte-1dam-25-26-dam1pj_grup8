@@ -1,4 +1,11 @@
 <?php
+/**
+ * Esquema y constantes de incidencias.
+ *
+ * - Define constantes de estados, prioridades y tipologías.
+ * - Provee helpers para asegurar/actualizar el schema en runtime.
+ * - Mantiene compatibilidad entre entornos (Docker / hosting).
+ */
 
 // Helpers to keep the "incidencies" table schema compatible across environments.
 // This project can be initialized either via db_init/create.sql (fresh DB) or via

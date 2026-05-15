@@ -1,4 +1,10 @@
 <?php
+/**
+ * Página de inicio (landing).
+ *
+ * - Si el usuario NO está autenticado, muestra acceso a Login/Registro.
+ * - Si el usuario está autenticado, enlaza a su panel según el rol.
+ */
 $bodyClass = 'home-page';
 require_once __DIR__ . '/incidencies/auth.php';
 auth_session_start();

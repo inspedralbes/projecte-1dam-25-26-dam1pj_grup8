@@ -1,4 +1,11 @@
 <?php
+/**
+ * Registro de incidencias (rol PROFESSOR).
+ *
+ * - Valida los datos del formulario.
+ * - Inserta una incidencia en MySQL (tabla `incidencies`).
+ * - Genera una localización a partir de planta/aula.
+ */
 
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('PROFESSOR');

@@ -1,4 +1,10 @@
 <?php
+/**
+ * Esquema de usuarios (tabla `USUARI`) y departamentos.
+ *
+ * - Asegura tablas/columnas/índices necesarios para autenticación.
+ * - Permite evolución del schema entre versiones del proyecto.
+ */
 
 // Helpers to keep the "USUARI" table schema compatible across environments.
 

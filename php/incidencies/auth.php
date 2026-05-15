@@ -1,4 +1,11 @@
 <?php
+/**
+ * Autenticación y control de acceso.
+ *
+ * - Gestión de sesión (timeout, regeneración de ID).
+ * - Helpers para rol actual y usuario autenticado.
+ * - Guards: `auth_require_login()` y `auth_require_role()`.
+ */
 
 // Minimal authentication + session helpers for this project.
 

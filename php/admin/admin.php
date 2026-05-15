@@ -1,4 +1,11 @@
 <?php
+/**
+ * Panel de administración (rol ADMIN).
+ *
+ * Funciones principales:
+ * - Gestión de usuarios (listado, detalle, edición y creación).
+ * - Visualización de estadísticas (logs + incidencias) consumiendo `admin_stats.php`.
+ */
 
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('ADMIN');

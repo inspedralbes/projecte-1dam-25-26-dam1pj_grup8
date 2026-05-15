@@ -1,4 +1,10 @@
 <?php
+/**
+ * Utilidad de listado de incidencias (reutilizable).
+ *
+ * Contiene `mostrar_incidencies($conn)` para renderizar una tabla HTML con
+ * incidencias desde MySQL.
+ */
 
 function mostrar_incidencies(mysqli $conn): void
 {

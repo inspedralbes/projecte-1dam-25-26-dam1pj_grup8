@@ -1,4 +1,10 @@
 <?php
+/**
+ * Ejemplo legacy de borrado (tabla `cases`).
+ *
+ * Nota: este archivo NO forma parte del flujo principal de incidencias.
+ * Se mantiene como referencia didáctica de borrado con doble confirmación.
+ */
 
 //Sempre volem tenir una connexió a la base de dades, així que la creem al principi del fitxer
 require_once 'connexio.php';

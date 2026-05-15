@@ -1,4 +1,12 @@
-<?php include 'header.php'; ?>
+<?php
+/**
+ * Página de ejemplo / legacy.
+ *
+ * Contiene fragmentos demostrativos (variables de entorno, menú simple, etc.).
+ * No es parte del flujo principal del Gestor de Incidencias.
+ */
+include 'header.php';
+?>
 
 <?php $bgImage = "/img/header.jpg"; ?>
 

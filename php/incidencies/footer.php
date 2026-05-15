@@ -1,3 +1,9 @@
+<!--
+    Footer común del sitio.
+
+    - Cierra la estructura HTML iniciada en `header.php`.
+    - Carga los JS compartidos (Bootstrap bundle, toast, etc.).
+-->
 <footer class="site-footer text-center py-4">
     <div class="container">
         <p class="mb-1 fw-bold">Projecte desenvolupat per</p>

@@ -1,4 +1,11 @@
 <?php
+/**
+ * Header común (layout).
+ *
+ * - Incluye el logger de accesos.
+ * - Inicia/valida la sesión.
+ * - Renderiza la navegación (Login/Logout, botones admin, etc.).
+ */
 require_once __DIR__ . '/logger.php';
 require_once __DIR__ . '/auth.php';
 

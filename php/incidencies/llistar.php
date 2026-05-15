@@ -1,4 +1,10 @@
 <?php
+/**
+ * Búsqueda/listado de incidencias para usuario autenticado.
+ *
+ * - Muestra SIEMPRE las incidencias del usuario (filtradas por email).
+ * - Permite filtrar adicionalmente por ID y/o departamento.
+ */
 
 require_once __DIR__ . '/auth.php';
 auth_require_login();
