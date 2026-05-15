@@ -1,0 +1,71 @@
+# MongoDB (Atlas) - Connexió des de PHP
+
+Aquest projecte està dockeritzat. La connexió a MongoDB es fa mitjançant:
+- **Extensió PHP**: `mongodb` (PECL) instal·lada al contenidor `web`
+- **Llibreria PHP (Composer)**: `mongodb/mongodb`
+- **Variable d'entorn**: `MONGODB_URI`
+
+## 1) Configurar MongoDB Atlas
+
+1. Crea un compte a Atlas i un **Project**.
+2. Crea un **Cluster** (M0 gratuït serveix per desenvolupament).
+3. **Database Access** → crea un usuari (username/password).
+4. **Network Access** → afegeix una IP:
+   - Per desenvolupament ràpid: `0.0.0.0/0` (NO recomanat a producció).
+   - Millor: la teva IP pública actual.
+5. **Connect** → **Drivers** → copia el connection string `mongodb+srv://...`.
+
+Exemple (NO real):
+
+`mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/incidencies?retryWrites=true&w=majority&appName=Projecte`
+
+## 2) Afegir variables d'entorn
+
+Copia [.env.example](../.env.example) a `.env` i omple:
+
+- `MONGODB_URI`
+   - Dev (local): `mongodb://mongo:27017/incidencies`
+   - Prod (Atlas): `mongodb+srv://.../incidencies?...`
+
+## 3) Construir i aixecar els contenidors
+
+Com que hem afegit dependències al contenidor PHP, cal reconstruir:
+
+- `docker compose build web`
+- `docker compose up -d`
+
+## 4) Llibreria PHP (Composer)
+
+La dependència està declarada a [php/composer.json](../php/composer.json) i bloquejada a [php/composer.lock](../php/composer.lock).
+
+- **Desenvolupament (docker-compose.yaml)**: el contenidor `web` executa automàticament `composer install` a l'arrencada si falta `vendor/autoload.php`.
+- **Producció (docker-compose.prod.yml)**: la imatge ja fa `composer install` durant el build, així que no cal cap pas manual al servidor.
+
+## 5) Provar la connexió
+
+Executa l'script de test:
+
+- `docker compose exec web php /var/www/html/test_mongo.php`
+
+Si tot va bé, veuràs un `Ping result` i un `Write/read OK`.
+
+## MongoDB Compass (local)
+
+Important: `mongo` és el **nom del servei dins Docker Compose**. Només el poden resoldre els contenidors de la mateixa xarxa.
+
+- **Des de PHP dins del contenidor `web`** (config de desenvolupament):
+   - `MONGODB_URI=mongodb://mongo:27017/incidencies`
+
+- **Des de MongoDB Compass al teu ordinador (host)**:
+   - URI: `mongodb://localhost:27017/incidencies?directConnection=true`
+   - Authentication: **None**
+
+Nota: a MongoDB, una base de dades normalment **no apareix** fins que té com a mínim una col·lecció amb dades.
+Si no veus `incidencies` a Compass, executa el test (`docker compose exec web php /var/www/html/test_mongo.php`) o navega per la web perquè el logger escrigui documents a `access_logs`.
+
+## Fitxers importants
+
+- [images/Dockerfile_php](../images/Dockerfile_php): instal·la `ext-mongodb` i `composer`
+- [docker-compose.yaml](../docker-compose.yaml): passa `MONGODB_URI` al contenidor
+- [php/incidencies/mongo_connexio.php](../php/incidencies/mongo_connexio.php): helper per obtenir `MongoDB\Database`
+- [php/test_mongo.php](../php/test_mongo.php): test de connexió

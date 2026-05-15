@@ -1,0 +1,145 @@
+body {
+    background-color: rgb(238, 238, 238);
+}
+
+.scrollable-panel {
+    max-height: 180px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.scrollable-list {
+    max-height: 340px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.scrollable-list table {
+    margin-bottom: 0;
+}
+
+.pagination {
+    gap: 0.25rem;
+}
+
+.pagination .page-link {
+    color: rgb(34, 40, 49);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: rgb(34, 40, 49);
+    border-color: rgb(34, 40, 49);
+    color: rgb(238, 238, 238);
+}
+
+/* Priority badges */
+.prio-badge {
+    display: inline-block;
+    padding: 0.18rem 0.5rem;
+    border-radius: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.prio-alta {
+    background-color: #f8e0dd;
+    color: #ff2e2e;
+}
+.prio-mitja {
+    background-color: #f7e6d3; 
+    color: #fcbf18;
+}
+.prio-baixa {
+    background-color: #f0fdf4; 
+    color: #3bdf7d;
+}
+
+/* CONTENEDOR PRINCIPAL */
+.tecnic-hero {
+    height: calc(100vh - 56px);
+    background: linear-gradient(
+        135deg,
+        rgb(34, 40, 49),
+        rgb(57, 62, 70)
+    );
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: rgb(238, 238, 238);
+    text-align: center;
+}
+
+/* CAJA CENTRAL */
+.tecnic-box {
+    background-color: rgba(57, 62, 70, 0.85);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    max-width: 500px;
+    width: 100%;
+}
+
+/* TÍTULO */
+.tecnic-title {
+    margin-bottom: 25px;
+    font-weight: bold;
+}
+
+/* BOTONES */
+.btn-tecnic {
+    background-color: rgb(34, 40, 49);
+    border: none;
+    color: rgb(0, 173, 181);
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    border-radius: 10px;
+    transition: 0.3s ease;
+}
+
+/* HOVER */
+.btn-tecnic:hover {
+    background-color: rgb(0, 173, 181);
+    color: rgb(238, 238, 238);
+    transform: translateY(-2px);
+}
+@media (max-width: 768px) {
+
+    .admin-box,
+    .professor-box,
+    .tecnic-box {
+        padding: 25px;
+        max-width: 90%;
+    }
+
+    .admin-title,
+    .professor-title,
+    .tecnic-title {
+        font-size: 1.4rem;
+    }
+
+    .btn-admin,
+    .btn-prof,
+    .btn-tecnic {
+        font-size: 16px;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .admin-box,
+    .professor-box,
+    .tecnic-box {
+        padding: 20px;
+        border-radius: 15px;
+    }
+
+    .btn-admin,
+    .btn-prof,
+    .btn-tecnic {
+        font-size: 15px;
+        padding: 10px;
+    }
+}

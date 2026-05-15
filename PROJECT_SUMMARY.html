@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>PROJECT_SUMMARY</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<h1 id="resum-del-projecte-grup8---gestor-dincidències">Resum del
+projecte: GRUP8 - Gestor d’Incidències</h1>
+<p>Data: 15/05/2026</p>
+<h2 id="visió-general">Visió general</h2>
+<p>Aplicació web per gestionar incidències d’un institut amb diferents
+rols: - ADMIN - RESPONSABLE - TECNIC - PROFESSOR</p>
+<p>Emmagatzematge: - Incidències i dades del sistema: MySQL (taula
+<code>incidencies</code>, <code>worklogs</code>, <code>USUARI</code>,
+<code>TECNIC</code>…). - Accés/telemetria: MongoDB
+(<code>access_logs</code>) per registrar accessos i generar
+estadístiques.</p>
+<p>Tecnologies principals: - PHP + Apache (contenidor <code>web</code>).
+- MySQL (contenidor <code>db</code>). - MongoDB opcional (contenidor
+<code>mongo</code>, per analytics). - Docker Compose per l’entorn de
+desenvolupament.</p>
+<h2 id="estructura-del-projecte-resum">Estructura del projecte
+(resum)</h2>
+<ul>
+<li><code>php/</code> : codi principal de l’aplicació web.
+<ul>
+<li><code>incidencies/</code> : helpers, esquema, logger, CRUD
+d’incidències.</li>
+<li><code>auth/</code> : login, register, verify, logout.</li>
+<li><code>admin/</code>, <code>professor/</code>, <code>tecnic/</code>,
+<code>responsable/</code> : pantalles segons rol.</li>
+<li><code>js/</code>, <code>css/</code>, <code>img/</code> : actius
+públics.</li>
+</ul></li>
+<li><code>images/</code> : Dockerfiles i entrypoint per la imatge
+PHP.</li>
+<li><code>db_init/</code> : scripts SQL d’inicialització (executats al
+crear el contenidor MySQL).</li>
+<li><code>.env</code> : configuració env local (no pujar a producció
+sense seguretat).</li>
+</ul>
+<h2 id="com-funciona-el-logging-punt-destacat">Com funciona el logging
+(punt destacat)</h2>
+<p>Originalment el logger gravava exclusivament a MongoDB
+(<code>access_logs</code>). Això provocava problemes en entorns on no
+està disponible <code>ext-mongodb</code> o on no es puja
+<code>vendor/</code> (ex. desplegament via FTP/FileZilla).</p>
+<p>Canvis realitzats per fer-ho robust: 1.
+<code>php/incidencies/logger.php</code> ahora intenta en aquest ordre: -
+MongoDB (si està disponible) - MySQL (<code>access_logs</code>), creada
+si cal - Fitxer local <code>php/storage/access_logs.jsonl</code></p>
+<p>Això garanteix que els logs quedin persistents encara que l’entorn de
+producció no tingui Mongo.</p>
+<h2 id="punts-importants-i-recomanacions">Punts importants i
+recomanacions</h2>
+<ul>
+<li>En producció, és preferible tenir MongoDB i la extensió
+<code>ext-mongodb</code> si vols estadístiques en temps real i
+anàlisi.</li>
+<li>Si desplegues via FTP (FileZilla) assegura’t de pujar el directori
+<code>php/storage</code> o comprova permisos perquè l’app pugui
+escriure-hi.</li>
+<li>No oblideu mantenir <code>php/vendor/</code> o executar
+<code>composer install</code> al servidor si voleu fer servir la
+llibreria oficial de MongoDB.</li>
+<li>Les credencials i URIs han d’estar en variables d’entorn
+(<code>.env</code>) i NO pujar-les al repositori.</li>
+</ul>
+<h2 id="com-generar-lentorn-local">Com generar l’entorn local</h2>
+<ol type="1">
+<li>Copia <code>.env.example</code> a <code>.env</code> i ajusta
+variables.</li>
+<li><code>docker compose up -d --build</code></li>
+<li>Accedeix a <code>http://localhost:8080</code> (web) i
+<code>http://localhost:8081</code> (Adminer)</li>
+</ol>
+<h2 id="rutesclaus-del-backend">Rutes/claus del backend</h2>
+<ul>
+<li><code>index.php</code> - Landing</li>
+<li><code>auth/login.php</code>, <code>auth/register.php</code>,
+<code>auth/logout.php</code>, <code>auth/verify.php</code></li>
+<li><code>incidencies/crear.php</code>,
+<code>incidencies/llistar.php</code>,
+<code>incidencies/detall_incidencia.php</code></li>
+<li><code>admin/admin.php</code>, <code>admin/admin_stats.php</code>
+(API JSON per a les estadístiques)</li>
+</ul>
+<h2 id="canvis-tècnics-rellevants-resum">Canvis tècnics rellevants
+(resum)</h2>
+<ul>
+<li>Logger amb fallback (Mongo -&gt; MySQL -&gt; JSONL)</li>
+<li><code>admin_stats.php</code> fa fallback a MySQL per retornar
+estadístiques quan Mongo falla</li>
+<li><code>php/storage/.htaccess</code> afegit per protegir logs del
+públic</li>
+<li>Comentaris d’encapçalament afegits a fitxers clau per a documentació
+ràpida</li>
+</ul>
+<h2 id="revisions-i-proves-fetes">Revisions i proves fetes</h2>
+<ul>
+<li>Validació sintàctica PHP (<code>php -l</code>) en fitxers modificats
+dins del contenidor.</li>
+<li>Prova E2E: aturar <code>mongo</code>, fer una petició HTTP i
+verificar que s’ha inserit a <code>access_logs</code> en MySQL.</li>
+</ul>
+<hr />
+<p>Per a qualsevol apartat que vulguis ampliar (diagrama d’arquitectura,
+exemples d’API, o un manual d’instal·lació detallat), digues-me quina
+profunditat vols i ho afegeixo al PDF.</p>
+</body>
+</html>

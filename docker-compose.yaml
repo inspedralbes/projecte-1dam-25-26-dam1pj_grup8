@@ -15,11 +15,26 @@ services:
       - "8080:80"
     volumes:
       - ./php:/var/www/html
+      - php_vendor:/var/www/html/vendor
     environment:
       VAR1: "sóc una pera i estic al docker-compose"
-      VAR2: ${VAR2}
+      VAR2: ${VAR2:-}
+      # MongoDB (dev: local docker service / prod: Atlas)
+      MONGODB_URI: ${MONGODB_URI:-}
+      # Backward-compat (older variable names)
+      MONGO_URI: ${MONGO_URI:-}
+      MONGO_DB: ${MONGO_DB:-}
     depends_on:
       - db
+      - mongo
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    # Optional: expose for local tools (Compass, mongosh)
+    ports:
+      - "27017:27017"
 
   db:
     # Tota la informació d'aquesta imatge està https://dockerhub.com/_/mysql
@@ -53,3 +68,7 @@ services:
       - "8081:8080"
     depends_on:
       - db
+
+volumes:
+  mongo_data:
+  php_vendor:
