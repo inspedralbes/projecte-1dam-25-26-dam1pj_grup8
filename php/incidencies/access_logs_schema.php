@@ -1,6 +1,7 @@
 <?php
 
-function ensure_access_logs_schema($conn){
+function ensure_access_logs_schema($conn, bool $seedDemo = false): void
+{
 
 $sql="
 CREATE TABLE IF NOT EXISTS access_logs(
@@ -14,31 +15,46 @@ access_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 $conn->query($sql);
 
 
-/*
-DATOS DEMO SOLO SI TABLA VACIA
-*/
-$c=$conn->query("SELECT COUNT(*) c FROM access_logs")->fetch_assoc()['c'];
+// Dades demo només si s'activa explícitament.
+// Això evita “logs falsos” en producció.
+$seedDemo = $seedDemo || (trim((string)(getenv('SEED_DEMO_ACCESS_LOGS') ?: '')) === '1');
+if (!$seedDemo) {
+	return;
+}
 
-if($c==0){
+$cRes = $conn->query("SELECT COUNT(*) c FROM access_logs");
+if ($cRes === false) {
+	return;
+}
 
-$demo=[
-['admin','admin.php'],
-['professor','crear_incidencia.php'],
-['tecnic','todas_las_incidencias.php'],
-['admin','incidencies.php'],
-['professor','crear_incidencia.php'],
-['admin','admin.php']
+$row = $cRes->fetch_assoc();
+$cRes->free();
+$c = (int)($row['c'] ?? 0);
+
+if ($c !== 0) {
+	return;
+}
+
+$demo = [
+	['admin', 'admin.php'],
+	['professor', 'crear_incidencia.php'],
+	['tecnic', 'todas_las_incidencias.php'],
+	['admin', 'incidencies.php'],
+	['professor', 'crear_incidencia.php'],
+	['admin', 'admin.php'],
 ];
 
-foreach($demo as $d){
-$u=$d[0];
-$p=$d[1];
-$conn->query("
-INSERT INTO access_logs(username,page)
-VALUES('$u','$p')
-");
+$stmt = $conn->prepare('INSERT INTO access_logs(username, page) VALUES(?, ?)');
+if ($stmt === false) {
+	return;
 }
 
+foreach ($demo as $d) {
+	$u = (string)($d[0] ?? '');
+	$p = (string)($d[1] ?? '');
+	$stmt->bind_param('ss', $u, $p);
+	@$stmt->execute();
 }
 
+$stmt->close();
 }

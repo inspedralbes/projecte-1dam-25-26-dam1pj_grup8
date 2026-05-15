@@ -59,7 +59,7 @@ $auth_role = auth_user_role();
 
 <?php if (is_array($auth_user) && (($auth_user['is_verified'] ?? true) === false)) : ?>
     <div class="alert alert-warning mb-0 rounded-0" role="alert">
-        El teu compte encara no està verificat. Pots continuar usant l'aplicació, però la verificació per email és pendent.
+        Pàgina en construcció.
     </div>
 <?php endif; ?>
 <script src="/js/hero.js"></script>

@@ -20,6 +20,7 @@ auth_require_role('ADMIN');
 
 require_once __DIR__ . '/../incidencies/connexio.php';
 require_once __DIR__ . '/../incidencies/incidencies_schema.php';
+require_once __DIR__ . '/../incidencies/access_logs_schema.php';
 require_once __DIR__ . '/../incidencies/mongo_connexio.php';
 require_once __DIR__ . '/../incidencies/logger.php';
 
@@ -109,6 +110,9 @@ if ($usuario !== '') { //filtro tecnico asignado
     $u = $conn->real_escape_string($usuario);
     // Filtrar incidencias por técnico asignado
     $incidencies_where[] = "tecnic_assignat = '$u'";
+
+    // Filtrar logs MySQL per usuari
+    $where[] = "username = '$u'";
 }
 
 if ($pagina !== '') { //filtor pagian sql
@@ -229,6 +233,86 @@ try {
 } catch (Throwable $e) {
     $mongoOk = false;
     $errors['mongo'] = $e->getMessage();
+}
+
+// ----------FALLBACK LOGS (MySQL)-----------------
+// En hosting/FTP (FileZilla) és habitual no tenir ext-mongodb o variables d'entorn.
+// Si Mongo falla, fem servir la taula MySQL `access_logs`.
+if ($mongoOk === false) {
+    try {
+        ensure_access_logs_schema($conn, false);
+
+        // Total accessos
+        $res = $conn->query("SELECT COUNT(*) total FROM access_logs $filter");
+        if ($res !== false) {
+            $row = $res->fetch_assoc();
+            $total = (int)($row['total'] ?? 0);
+            $res->free();
+        }
+
+        // Pàgines úniques
+        $res = $conn->query("SELECT COUNT(DISTINCT page) total FROM access_logs $filter");
+        if ($res !== false) {
+            $row = $res->fetch_assoc();
+            $pagesCount = (int)($row['total'] ?? 0);
+            $res->free();
+        }
+
+        // Usuaris únics (no null/buit)
+        $userFilter = $filter === ''
+            ? " WHERE username IS NOT NULL AND username <> ''"
+            : ($filter . " AND username IS NOT NULL AND username <> ''");
+
+        $res = $conn->query("SELECT COUNT(DISTINCT username) total FROM access_logs $userFilter");
+        if ($res !== false) {
+            $row = $res->fetch_assoc();
+            $usersCount = (int)($row['total'] ?? 0);
+            $res->free();
+        }
+
+        // Top pàgines
+        $pages = [];
+        $res = $conn->query("SELECT page, COUNT(*) total FROM access_logs $filter GROUP BY page ORDER BY total DESC LIMIT 5");
+        if ($res !== false) {
+            while ($r = $res->fetch_assoc()) {
+                $pages[] = [
+                    'page' => (string)($r['page'] ?? ''),
+                    'total' => (int)($r['total'] ?? 0),
+                ];
+            }
+            $res->free();
+        }
+
+        // Top usuaris
+        $users = [];
+        $res = $conn->query("SELECT username, COUNT(*) total FROM access_logs $userFilter GROUP BY username ORDER BY total DESC LIMIT 5");
+        if ($res !== false) {
+            while ($r = $res->fetch_assoc()) {
+                $users[] = [
+                    'username' => (string)($r['username'] ?? ''),
+                    'total' => (int)($r['total'] ?? 0),
+                ];
+            }
+            $res->free();
+        }
+
+        // Tendència per dia
+        $trend = [];
+        $res = $conn->query("SELECT DATE(access_time) dia, COUNT(*) total FROM access_logs $filter GROUP BY dia ORDER BY dia ASC");
+        if ($res !== false) {
+            while ($r = $res->fetch_assoc()) {
+                $trend[] = [
+                    'dia' => (string)($r['dia'] ?? ''),
+                    'total' => (int)($r['total'] ?? 0),
+                ];
+            }
+            $res->free();
+        }
+    } catch (Throwable $e) {
+        // Keep API stable; just report error.
+        $mysqlOk = false;
+        $errors['mysql_logs'] = $e->getMessage();
+    }
 }
 // ----------ESTADÍSTICAS DE INCIDENCIAS-----------------
 /**
