@@ -40,17 +40,20 @@ function h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
-
+/**
+ * Valida dates en format YYYY-MM-DD.
+ */
 function valid_date_yyyy_mm_dd(string $value): bool
 {
     return $value !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1;
 }
 
+/// Array amb els tècnics disponibles
 $tecnics_disponibles = [];
-if ($schema_ok) {
+if ($schema_ok) { /// Consulta tècnics ordenats alfabèticament
     $tecnics_query = $conn->query("SELECT FIRST_NAME, LAST_NAME FROM TECNIC ORDER BY FIRST_NAME, LAST_NAME");
     if ($tecnics_query !== false) {
-        while ($row = $tecnics_query->fetch_assoc()) {
+        while ($row = $tecnics_query->fetch_assoc()) { /// Genera el nom complet
             $label = trim((string)($row['FIRST_NAME'] ?? '') . ' ' . (string)($row['LAST_NAME'] ?? ''));
             if ($label !== '') {
                 $tecnics_disponibles[] = $label;
@@ -64,7 +67,7 @@ if ($schema_ok) {
 if (!in_array(INCIDENCIA_TECNIC_PER_DEFECTE, $tecnics_disponibles, true)) {
     array_unshift($tecnics_disponibles, INCIDENCIA_TECNIC_PER_DEFECTE);
 }
-
+//recupera el tècnic seleccionat en el formulario o asigna el valor por defecto
 $tecnic = trim((string)($_GET['tecnic'] ?? ''));
 if ($tecnic === '') {
     $tecnic = INCIDENCIA_TECNIC_PER_DEFECTE;
@@ -72,7 +75,7 @@ if ($tecnic === '') {
 if (!in_array($tecnic, $tecnics_disponibles, true)) {
     $tecnic = $tecnics_disponibles[0] ?? INCIDENCIA_TECNIC_PER_DEFECTE;
 }
-
+//filtres rebuts del GET
 $date_from = trim((string)($_GET['date_from'] ?? ''));
 $date_to = trim((string)($_GET['date_to'] ?? ''));
 $estat = trim((string)($_GET['estat'] ?? ''));
@@ -83,7 +86,7 @@ if ($date_from !== '' && !valid_date_yyyy_mm_dd($date_from)) {
 if ($date_to !== '' && !valid_date_yyyy_mm_dd($date_to)) {
     $date_to = '';
 }
-
+//estats valids segons l'esquema d'incidencies
 $estat_valids = [
     '',
     INCIDENCIA_ESTAT_PENDENT_ASSIGNAR,
@@ -111,20 +114,24 @@ $detail_totals = ['incidents' => 0, 'actions' => 0, 'hours' => 0.0];
 
 if ($schema_ok) {
     // Global per-technician report (3-table join via TECNIC + incidencies + worklogs).
+
+     //INFORME GLOBAL PER TÈCNIC
     $where = [];
     $types = '';
     $params = [];
-
+    // Filtre data inci
     if ($date_from !== '') {
         $where[] = 'DATE(i.data_incidencia) >= ?';
         $types .= 's';
         $params[] = $date_from;
     }
+    /// Filtre data fi
     if ($date_to !== '') {
         $where[] = 'DATE(i.data_incidencia) <= ?';
         $types .= 's';
         $params[] = $date_to;
     }
+
     if ($estat !== '') {
         $where[] = 'i.estat = ?';
         $types .= 's';
@@ -132,6 +139,13 @@ if ($schema_ok) {
     }
 
     $where_sql = count($where) > 0 ? ('WHERE ' . implode(' AND ', $where)) : '';
+
+    /**
+     * Consulta:
+     * - Uneix tècnics, incidències i worklogs
+     * - Calcula incidències totals
+     * - Calcula hores totals i mitjana
+     */
 
     $sql_global = "
         SELECT tecnic, COUNT(*) AS incidents, SUM(total_hours) AS total_hours, AVG(total_hours) AS avg_hours_per_incident
@@ -159,7 +173,7 @@ if ($schema_ok) {
         }
         if ($stmt_global->execute()) {
             $res = $stmt_global->get_result();
-            if ($res !== false) {
+            if ($res !== false) {// Executa la consulta
                 while ($row = $res->fetch_assoc()) {
                     $global_rows[] = $row;
                 }
@@ -169,7 +183,7 @@ if ($schema_ok) {
         $stmt_global->close();
     }
 
-    // Detail report for selected technician (incidencies + worklogs join).
+     //INFORME DETALLAT DEL TÈCNIC SELECCIONAT
     $where2 = ['i.tecnic_assignat = ?'];
     $types2 = 's';
     $params2 = [$tecnic];
@@ -189,7 +203,7 @@ if ($schema_ok) {
         $types2 .= 's';
         $params2[] = $estat;
     }
-
+    /// Mapa de columnes ordenables
     $order_map = [
         'data' => 'i.data_incidencia',
         'hours' => 'total_hours',
@@ -199,7 +213,12 @@ if ($schema_ok) {
         'estat' => 'i.estat',
     ];
     $order_col = $order_map[$sort] ?? 'i.data_incidencia';
-
+     /**
+     * Consulta detallada:
+     * - Mostra incidències del tècnic
+     * - Suma hores
+     * - Compta accions/worklogs
+     */
     $sql_detail = "
         SELECT
             i.id,
