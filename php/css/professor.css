@@ -1,0 +1,93 @@
+body {
+    background-color: rgb(238, 238, 238);
+}
+
+/* CONTENEDOR PRINCIPAL */
+.professor-hero {
+    height: calc(100vh - 56px);
+    background: linear-gradient(
+        135deg,
+        rgb(34, 40, 49),
+        rgb(57, 62, 70)
+    );
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: rgb(238, 238, 238);
+    text-align: center;
+}
+
+/* CAJA CENTRAL */
+.professor-box {
+    background-color: rgba(57, 62, 70, 0.85);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    max-width: 500px;
+    width: 100%;
+}
+
+/* TÍTULO */
+.professor-title {
+    margin-bottom: 25px;
+    font-weight: bold;
+}
+
+/* BOTONES */
+.btn-prof {
+    background-color: rgb(34, 40, 49);
+    border: none;
+    color: rgb(0, 173, 181);
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    border-radius: 10px;
+    transition: 0.3s ease;
+}
+
+/* hover botones */
+.btn-prof:hover {
+    background-color: rgb(0, 173, 181);
+    transform: translateY(-2px);
+}
+@media (max-width: 768px) {
+
+    .admin-box,
+    .professor-box,
+    .tecnic-box {
+        padding: 25px;
+        max-width: 90%;
+    }
+
+    .admin-title,
+    .professor-title,
+    .tecnic-title {
+        font-size: 1.4rem;
+    }
+
+    .btn-admin,
+    .btn-prof,
+    .btn-tecnic {
+        font-size: 16px;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .admin-box,
+    .professor-box,
+    .tecnic-box {
+        padding: 20px;
+        border-radius: 15px;
+    }
+
+    .btn-admin,
+    .btn-prof,
+    .btn-tecnic {
+        font-size: 15px;
+        padding: 10px;
+    }
+}

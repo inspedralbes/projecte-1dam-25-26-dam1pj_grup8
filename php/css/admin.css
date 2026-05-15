@@ -1,0 +1,141 @@
+body {
+    background-color: rgb(238, 238, 238);
+}
+
+/* CONTENEDOR PRINCIPAL */
+.admin-hero {
+    height: calc(100vh - 56px);
+    background: linear-gradient(
+        135deg,
+        rgb(34, 40, 49),
+        rgb(57, 62, 70)
+    );
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: rgb(238, 238, 238);
+    text-align: center;
+}
+
+/* CAJA CENTRAL */
+.admin-box {
+    background-color: rgba(57, 62, 70, 0.85);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    max-width: 500px;
+    width: 100%;
+}
+
+/* TÍTULO */
+.admin-title {
+    margin-bottom: 25px;
+    font-weight: bold;
+}
+
+/* BOTONES */
+.btn-admin {
+    background-color: rgb(34, 40, 49);
+    border: none;
+    color: rgb(0, 173, 181);
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    border-radius: 10px;
+    transition: 0.3s ease;
+}
+
+/* HOVER */
+.btn-admin:hover {
+    background-color: rgb(0, 173, 181);
+    color: rgb(238, 238, 238);
+    transform: translateY(-2px);
+}
+@media (max-width: 768px) {
+
+    .admin-box,
+    .professor-box,
+    .tecnic-box {
+        padding: 25px;
+        max-width: 90%;
+    }
+
+    .admin-title,
+    .professor-title,
+    .tecnic-title {
+        font-size: 1.4rem;
+    }
+
+    .btn-admin,
+    .btn-prof,
+    .btn-tecnic {
+        font-size: 16px;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .admin-box,
+    .professor-box,
+    .tecnic-box {
+        padding: 20px;
+        border-radius: 15px;
+    }
+
+    .btn-admin,
+    .btn-prof,
+    .btn-tecnic {
+        font-size: 15px;
+        padding: 10px;
+    }
+}
+body{
+background:#f4f7fb;
+}
+
+.stat-card{
+background:white;
+border-radius:20px;
+padding:35px;
+text-align:center;
+box-shadow:0 4px 15px rgba(0,0,0,.08);
+min-height:200px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+}
+
+.stat-card h2{
+font-size:48px;
+font-weight:700;
+margin-top:15px;
+}
+
+.chart-box{
+background:white;
+padding:30px;
+border-radius:20px;
+box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+.chart-box-compact{
+min-height:420px;
+}
+
+.chart-box canvas{
+width:100% !important;
+}
+
+.table-box{
+background:white;
+padding:30px;
+border-radius:20px;
+box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+canvas{
+max-height:420px;
+}

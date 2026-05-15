@@ -1,0 +1,170 @@
+.home-page,
+body {
+    min-height: 100vh;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    background: url('/php/img/header.png') no-repeat center top fixed;
+    background-size: cover;
+}
+
+.site-footer {
+    margin-top: auto;
+}
+
+.home-page {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.home-page .navbar,
+.home-page .site-footer {
+    flex: 0 0 auto;
+}
+
+.home-page .hero-header {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+}
+
+.hero-header {
+    height: auto;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    text-align: center;
+    overflow: hidden;
+    margin: 0;
+    color: white;
+}
+.hero-title {
+    color: rgb(0, 173, 181);
+}
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 800px;
+    padding: 1rem;
+}
+
+.btn-custom {
+    background-color: rgb(34, 40, 49);
+    border-color: rgb(34, 40, 49);
+    color: white;
+}
+
+.btn-custom:hover {
+    background-color: rgb(24, 30, 39);
+    border-color: rgb(24, 30, 39);
+    color: white;
+}
+
+/* Cuando aparecen los roles dentro del hero */
+.hero-roles {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.home-page .hero-content h1 {
+    margin-bottom: 1rem;
+}
+
+.home-page .hero-content #enterBtn {
+    margin-top: 0;
+}
+
+.home-page .hero-roles {
+    gap: 0.75rem;
+}
+
+.home-page .hero-roles .btn-custom {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+/* FOOTER */
+.site-footer{
+    background: rgb(34,40,49);
+    color: rgb(238,238,238);
+    text-align: center;
+    padding: 20px 0;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* PÁGINAS DE ROL */
+.role-page{
+    min-height: calc(100vh - 140px);
+    background: linear-gradient(
+        135deg,
+        rgb(34,40,49),
+        rgb(57,62,70)
+    );
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.role-box{
+    background: rgba(57,62,70,.9);
+    padding:50px;
+    border-radius:24px;
+    text-align:center;
+    max-width:600px;
+    width:100%;
+    box-shadow:0 12px 35px rgba(0,0,0,.3);
+}
+
+.role-box h1{
+    color:rgb(238,238,238);
+    margin-bottom:30px;
+}
+
+.role-btn{
+    background: rgb(34,40,49);
+    color:white;
+    border:none;
+    border-radius:12px;
+    padding:15px;
+    width:100%;
+    font-size:1.1rem;
+    transition:.3s;
+}
+
+.role-btn:hover{
+    background: rgb(0,173,181);
+    transform: translateY(-2px);
+    color:white;
+}
+
+.toast-container-custom{
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    z-index: 1080;
+    width: min(360px, calc(100vw - 2.5rem));
+}
+
+.js-toast-notification{
+    box-shadow: 0 12px 35px rgba(0,0,0,.25);
+    border-radius: 14px;
+    overflow: hidden;
+}

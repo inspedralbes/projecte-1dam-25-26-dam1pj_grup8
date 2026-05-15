@@ -1,0 +1,43 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: images/Dockerfile_php_prod
+    ports:
+      - "8080:80"
+    environment:
+      VAR1: "sóc una pera i estic al docker-compose"
+      VAR2: ${VAR2}
+      # MongoDB Atlas (production)
+      MONGODB_URI: ${MONGODB_URI}
+      # Optional (useful when the URI omits /<db>)
+      MONGODB_DB: ${MONGODB_DB:-}
+      # Backward-compat (older variable names)
+      MONGO_URI: ${MONGO_URI:-}
+      MONGO_DB: ${MONGO_DB:-}
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: mysql:9.3
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      LANG: C.UTF-8
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db_init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+
+  adminer:
+    image: adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  db_data:
