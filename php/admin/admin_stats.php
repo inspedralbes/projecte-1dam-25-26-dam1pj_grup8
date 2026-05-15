@@ -18,19 +18,27 @@
 require_once __DIR__ . '/../incidencies/auth.php';
 auth_require_role('ADMIN');
 
+<<<<<<< HEAD
 require_once __DIR__ . '/../incidencies/connexio.php';
 require_once __DIR__ . '/../incidencies/incidencies_schema.php';
 require_once __DIR__ . '/../incidencies/access_logs_schema.php';
 require_once __DIR__ . '/../incidencies/mongo_connexio.php';
 require_once __DIR__ . '/../incidencies/logger.php';
+=======
+require_once __DIR__ . '/../incidencies/connexio.php'; //mysql
+require_once __DIR__ . '/../incidencies/incidencies_schema.php'; //esquema de incidencias
+require_once __DIR__ . '/../incidencies/mongo_connexio.php'; //mongo
+require_once __DIR__ . '/../incidencies/logger.php'; //sistema de logs
+>>>>>>> 3e5811e (feat(docu_admin_stats): h ecoumentado mejor admin_stats los quesitos)
 
 header('Content-Type: application/json; charset=utf-8'); //api responde en json
 
-$errors = [];
+$errors = []; //guarda errores
+//flags para sber si funcionan
 $mongoOk = true;
 $mysqlOk = true;
 
-$schemaResult = ensure_incidencies_schema($conn); //comprobacion tablas y campos sino se crea
+$schemaResult = ensure_incidencies_schema($conn); //comprobacion de errores de sql( tablas y campos) sino se crea
 if (is_array($schemaResult) && (($schemaResult['ok'] ?? false) !== true)) {
     $mysqlOk = false;
     $errors['mysql'] = (string)($schemaResult['error'] ?? 'Error assegurant l\'esquema de incidències');
@@ -68,10 +76,11 @@ $inicio = clean_date($_GET['inicio'] ?? null);
 $fin = clean_date($_GET['fin'] ?? null);
 $usuario = trim((string)($_GET['usuario'] ?? ''));
 $pagina = trim((string)($_GET['pagina'] ?? ''));
+//contruir filtros
 $where = [];
 $incidencies_where = [];
 
-// Defaults so the API always returns a complete JSON shape.
+//valores por defecto : Así la API siempre devuelve una estructura JSON válida
 $total = 0;
 $pagesCount = 0;
 $usersCount = 0;
@@ -94,6 +103,8 @@ function mongo_match_stage(array $match){
     return count($match) > 0 ? $match : (object)[];
 }
 
+//CONSTRUCCIÓN DE FILTROS SQL Y MONGO A PARTIR DE LOS PARAMETROS RECIBIDOS EN LA URL
+
 if ($inicio !== null) {//filtro fecha inicio
     $i = $conn->real_escape_string($inicio);
     $where[] = "DATE(access_time) >= '$i'";
@@ -115,17 +126,17 @@ if ($usuario !== '') { //filtro tecnico asignado
     $where[] = "username = '$u'";
 }
 
-if ($pagina !== '') { //filtor pagian sql
+if ($pagina !== '') { //filtor pagian viistada 
     $p = $conn->real_escape_string($pagina);
     $where[] = "page LIKE '%$p%'";
 }
-//where para sql y mongo se construye a partir de los filtros recibidos en la URL
+//where para sql y mongo se construye a partir de los filtros recibidos 
 $filter = count($where) > 0 ? (' WHERE ' . implode(' AND ', $where)) : '';
 $incidenciesFilter = count($incidencies_where) > 0 ? (' WHERE ' . implode(' AND ', $incidencies_where)) : '';
 
 // ----------ESTADÍSTICAS DE ACCESOS (MongoDB)-----------------
 try {
-    $mongoMatch = [];
+    $mongoMatch = []; // Array que tendra filtros MongoDB
 
     // Construcción del filtro de fechas
     if ($inicio !== null || $fin !== null) {
@@ -141,12 +152,33 @@ try {
             $end = new DateTimeImmutable('2100-01-01 23:59:59');
         }
 
-        $mongoMatch['timestamp'] = [
+        $mongoMatch['timestamp'] = [  // Construcción filtro timestamp MongoDB
             '$gte' => new MongoDB\BSON\UTCDateTime($start->getTimestamp() * 1000),
             '$lte' => new MongoDB\BSON\UTCDateTime($end->getTimestamp() * 1000),
         ];
     }
-
+    /*
+        * Este bloque añade un filtro para buscar únicamente
+        * los accesos realizados por un usuario concreto. 
+         * Ejemplo URL:
+        * ?usuario=alex
+        *
+        * MongoDB recibirá:
+        * {
+        *   "user": "alex"
+        * }
+        *
+        * Esto significa:
+        *  - solo devolver documentos donde
+        *  - el campo "user" sea exactamente "alex"
+        *
+        * Ejemplo documento Mongo:
+        * {
+        *   "user": "alex",
+        *   "url": "/dashboard",
+        *   "timestamp": ...
+        * }
+        * */
     if ($usuario !== '') {
         $mongoMatch['user'] = $usuario;
     }
@@ -158,7 +190,7 @@ try {
     $mongoDb = mongo_db();
     $logs = $mongoDb->selectCollection('access_logs');
 
-    $total = (int) $logs->countDocuments($mongoMatch);
+    $total = (int) $logs->countDocuments($mongoMatch); //total accesos
 
     $pagesCountAgg = $logs->aggregate([
         ['$match' => mongo_match_stage($mongoMatch)],
@@ -174,7 +206,7 @@ try {
     } else {
         $pagesCount = 0;
     }
-
+    //TOTAL USUARIOS ÚNICOS
     $usersCountAgg = $logs->aggregate([
         ['$match' => mongo_match_stage(array_merge($mongoMatch, ['user' => ['$ne' => null]]))],
         ['$group' => ['_id' => '$user']],
@@ -189,7 +221,7 @@ try {
     } else {
         $usersCount = 0;
     }
-
+    //TOP 5 PÁGINAS MÁS VISITADAS
     $pagesAgg = $logs->aggregate([
         ['$match' => mongo_match_stage($mongoMatch)],
         ['$group' => ['_id' => '$url', 'total' => ['$sum' => 1]]],
@@ -197,10 +229,11 @@ try {
         ['$limit' => 5],
         ['$project' => ['_id' => 0, 'page' => '$_id', 'total' => 1]],
     ]);
-    foreach ($pagesAgg as $doc) {
+    foreach ($pagesAgg as $doc) { //conv  result a array php
         $pages[] = ['page' => (string)($doc->page ?? ''), 'total' => (int)($doc->total ?? 0)];
     }
-
+    
+    //TOP 5 USUARIOS MÁS ACTIVOS
     $usersAgg = $logs->aggregate([
         ['$match' => mongo_match_stage(array_merge($mongoMatch, ['user' => ['$ne' => null]]))],
         ['$group' => ['_id' => '$user', 'total' => ['$sum' => 1]]],
@@ -211,7 +244,7 @@ try {
     foreach ($usersAgg as $doc) {
         $users[] = ['username' => (string)($doc->username ?? ''), 'total' => (int)($doc->total ?? 0)];
     }
-
+    //TENDENCIA ACCESOS POR DÍA
     $trendAgg = $logs->aggregate([
         ['$match' => mongo_match_stage($mongoMatch)],
         ['$group' => [
@@ -231,7 +264,7 @@ try {
         $trend[] = ['dia' => (string)($doc->dia ?? ''), 'total' => (int)($doc->total ?? 0)];
     }
 } catch (Throwable $e) {
-    $mongoOk = false;
+    $mongoOk = false;  // Si Mongo falla -> guardar error
     $errors['mongo'] = $e->getMessage();
 }
 
@@ -325,6 +358,7 @@ if ($mongoOk === false) {
  *  - pendent
  *  - rebutjada
  */
+//INCIDENCIAS AGRUPADAS POR ESTADO
 $incidenciesStatus = [];
 $res = $conn->query("SELECT estat, COUNT(*) total FROM incidencies $incidenciesFilter GROUP BY estat ORDER BY total DESC");
 if ($res === false) {
@@ -338,7 +372,7 @@ if ($res === false) {
     }
     $res->free();
 }
-
+//INCIDENCIAS POR DEPARTAMENTO Y PRIORIDAD
 $incidenciesByDept = [];
 $res = $conn->query("SELECT departament, prioritat, COUNT(*) total FROM incidencies $incidenciesFilter GROUP BY departament, prioritat ORDER BY total DESC");
 if ($res === false) {
@@ -357,6 +391,7 @@ $deptMatrix = [];
 /**
  * prioritats de incidencias
  */
+//MAPA DE PRIORIDADES
 $priorityMap = [
     'alta' => 'Alta',
     'mitja' => 'Mitja',
@@ -383,12 +418,13 @@ foreach ($incidenciesByDept as $row) {
     if (!isset($deptMatrix[$dept])) {
         $deptMatrix[$dept] = ['Alta' => 0, 'Mitja' => 0, 'Baixa' => 0, 'total' => 0];
     }
-
+    //prioridadvalida
     $priority = $priorityMap[$prioritat] ?? 'Mitja';
+    //sumar incidencia
     $deptMatrix[$dept][$priority] += $totalDept;
     $deptMatrix[$dept]['total'] += $totalDept;
 }
-
+//ORDENAR DEPARTAMENTOS POR TOTAL
 $deptOrdered = $deptMatrix;
 uasort($deptOrdered, function ($left, $right) {
     return (($right['total'] ?? 0) <=> ($left['total'] ?? 0));
@@ -402,7 +438,7 @@ foreach ($deptLabels as $dept) {
     $deptData['Mitja'][] = (int)($deptOrdered[$dept]['Mitja'] ?? 0);
     $deptData['Baixa'][] = (int)($deptOrdered[$dept]['Baixa'] ?? 0);
 }
-
+//AGRUPAR RESTO COMO "ALTRES"
 if (count($deptOrdered) > count($deptLabels)) {
     $otherAlta = 0;
     $otherMitja = 0;
@@ -413,7 +449,8 @@ if (count($deptOrdered) > count($deptLabels)) {
         $otherMitja += (int)($restValues['Mitja'] ?? 0);
         $otherBaixa += (int)($restValues['Baixa'] ?? 0);
     }
-
+    
+    //TOP 6 DEPARTAMENTOS
     $deptLabels[] = 'Altres';
     $deptData['Alta'][] = $otherAlta;
     $deptData['Mitja'][] = $otherMitja;
@@ -427,6 +464,7 @@ Fcionalidades:
  *  - Procesa y organiza los datos
  *  - Devuelve  info en formato JSON
  * */
+//RESPUESTA FINAL API
 $response = [
     'total' => $total,
     'pagesCount' => $pagesCount,
@@ -442,9 +480,9 @@ $response = [
     'mongoOk' => $mongoOk,
     'mysqlOk' => $mysqlOk,
 ];
-
+//añdir errores si los hay
 if (!empty($errors)) {
     $response['errors'] = $errors;
 }
-
+//json final devolver a frontend
 echo json_encode($response);
