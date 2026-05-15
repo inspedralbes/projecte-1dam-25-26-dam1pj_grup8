@@ -20,6 +20,7 @@ auth_require_role('ADMIN');
 
 require_once __DIR__ . '/../incidencies/connexio.php'; //mysql
 require_once __DIR__ . '/../incidencies/incidencies_schema.php'; //esquema de incidencias
+require_once __DIR__ . '/../incidencies/access_logs_schema.php'; //esquema de logs de acceso
 require_once __DIR__ . '/../incidencies/mongo_connexio.php'; //mongo
 require_once __DIR__ . '/../incidencies/logger.php'; //sistema de logs
 
